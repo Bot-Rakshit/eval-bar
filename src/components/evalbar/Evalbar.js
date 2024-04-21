@@ -90,7 +90,7 @@ function EvalBar({
       return "Gorya";
     }
     if (parts.includes("Gukesh")) {
-      return "Gukesh👑"; // final round of candidates 
+      return "Gukesh"; // final round of candidates 
     }
 
     // Find the shortest name
