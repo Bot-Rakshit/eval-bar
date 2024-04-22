@@ -7,6 +7,11 @@ const TournamentsWrapper = styled.div`
   flex-direction: column;
   align-items: center;
 `;
+const NoBroadcastsMessage = styled.p`
+  color: #faf9f6; /* White color */
+  font-size: 1.2em; /* Bigger font size */
+`;
+
 
 const Card = styled.div`
   display: flex;
@@ -194,7 +199,7 @@ function TournamentsList({ onSelect }) {
     </Button>
 
     {filteredTournaments.length === 0 ? (
-      <p>No ongoing broadcasts</p>
+      <NoBroadcastsMessage>No ongoing broadcasts</NoBroadcastsMessage>
     ) : (
       filteredTournaments.map((tournament, index) =>
         tournament.tour && tournament.rounds && tournament.rounds.length > 0 ? (
