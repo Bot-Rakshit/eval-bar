@@ -243,6 +243,7 @@ function TournamentsList({ onSelect }) {
     )}
   </TournamentsWrapper>
 );
+}
 
 
 export default TournamentsList;
