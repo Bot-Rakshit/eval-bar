@@ -129,7 +129,7 @@ function TournamentsList({ onSelect }) {
   const [checkedItems, setCheckedItems] = useState({});
   const [customUrl, setCustomUrl] = useState("");
   const [tournamentId, setTournamentId] = useState("");
-
+  const [broadcasts, setbroadcasts] = useState("true");
   useEffect(() => {
     fetch("https://lichess.org/api/broadcast?nb=50")
       .then((response) => response.text())
@@ -150,7 +150,7 @@ function TournamentsList({ onSelect }) {
     .finally(() => {
       // After fetching and filtering, check the length
       if (filteredTournaments.length === 0) {
-         broadcasts = false; 
+         setbroadcasts(false); 
       }
     });
 }, []); 
@@ -178,7 +178,6 @@ function TournamentsList({ onSelect }) {
     }
   };
 
-  var broadcasts = true;
 
   return (
   <TournamentsWrapper>
