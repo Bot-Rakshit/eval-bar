@@ -146,8 +146,15 @@ function TournamentsList({ onSelect }) {
         setTournaments(ongoingTournaments);
         setFilteredTournaments(ongoingTournaments);
       })
-      .catch((error) => console.error("Error fetching tournaments:", error));
-  }, []);
+      .catch((error) => console.error("Error fetching tournaments:", error))
+    .finally(() => {
+      // After fetching and filtering, check the length
+      if (filteredTournaments.length === 0) {
+         broadcasts = false; 
+      }
+    });
+}, []); 
+
 
   const handleSearch = () => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -170,6 +177,8 @@ function TournamentsList({ onSelect }) {
       onSelect([tournamentId]); // This line is added to simulate the selection
     }
   };
+
+  var broadcasts = true;
 
   return (
   <TournamentsWrapper>
@@ -198,7 +207,7 @@ function TournamentsList({ onSelect }) {
       Confirm
     </Button>
 
-    {filteredTournaments.length === 0 ? (
+    { broadcasts === false ? (
       <NoBroadcastsMessage>No ongoing broadcasts</NoBroadcastsMessage>
     ) : (
       filteredTournaments.map((tournament, index) =>
