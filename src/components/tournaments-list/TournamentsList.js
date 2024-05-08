@@ -12,7 +12,6 @@ const NoBroadcastsMessage = styled.p`
   font-size: 1.2em; /* Bigger font size */
 `;
 
-
 const Card = styled.div`
   display: flex;
   flex-direction: column;
@@ -37,9 +36,9 @@ const Card = styled.div`
   }
 
   .card-image {
-    width: 100%; // Adjust the width of the image
-    height: auto; // Maintain aspect ratio
-    margin-bottom: 1rem; // Add some space below the image
+    width: 100%; /* Adjust the width of the image */
+    height: auto; /* Maintain aspect ratio */
+    margin-bottom: 1rem; /* Add some space below the image */
   }
 `;
 
@@ -86,14 +85,13 @@ const Button = styled.a`
 `;
 
 const Title = styled.h1`
-  borderbottom: 5px solid #4caf50;
-  paddingbottom: 1rem;
-  fontsize: 2em;
-  fontweight: bold;
+  border-bottom: 5px solid #4caf50;
+  padding-bottom: 1rem;
+  font-size: 2em;
+  font-weight: bold;
   color: #4caf50;
-  textalign: center;
-  marginbottom: 3rem;
-  margin: 0 auto;
+  text-align: center;
+  margin-bottom: 3rem;
 `;
 
 const SearchWrapper = styled.div`
@@ -121,7 +119,8 @@ const SearchButton = styled.button`
     background-color: #36a420;
   }
 `;
-function TournamentsList({ onSelect }) {
+
+const TournamentsList = ({ onSelect }) => {
   const [tournaments, setTournaments] = useState([]);
   const [filteredTournaments, setFilteredTournaments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -129,7 +128,8 @@ function TournamentsList({ onSelect }) {
   const [checkedItems, setCheckedItems] = useState({});
   const [customUrl, setCustomUrl] = useState("");
   const [tournamentId, setTournamentId] = useState("");
-  const [broadcasts, setbroadcasts] = useState("true");
+  const [broadcasts, setBroadcasts] = useState(true);
+
   useEffect(() => {
     fetch("https://lichess.org/api/broadcast?nb=50")
       .then((response) => response.text())
@@ -145,16 +145,14 @@ function TournamentsList({ onSelect }) {
         );
         setTournaments(ongoingTournaments);
         setFilteredTournaments(ongoingTournaments);
+        if (ongoingTournaments.length === 0) {
+          setBroadcasts(false);
+        }
       })
-      .catch((error) => console.error("Error fetching tournaments:", error))
-    .finally(() => {
-      // After fetching and filtering, check the length
-      if (filteredTournaments.length === 0) {
-         setbroadcasts(false); 
-      }
-    });
-}, []); 
-
+      .catch((error) =>
+        console.error("Error fetching tournaments:", error)
+      );
+  }, []);
 
   const handleSearch = () => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
@@ -178,8 +176,8 @@ function TournamentsList({ onSelect }) {
     }
   };
 
-
-  <TournamentsWrapper>
+  return (
+    <TournamentsWrapper>
       <Title>LIVE BROADCASTS</Title>
       <SearchWrapper>
         <SearchInput
@@ -242,16 +240,18 @@ function TournamentsList({ onSelect }) {
               <CardDate>{tournament.tour.date}</CardDate>
             </CardHeader>
             <CardDescription>{tournament.tour.description}</CardDescription>
-            <Button href={tournament.tour.url} target="_blank" rel="noreferrer">
+            <Button
+              href={tournament.tour.url}
+              target="_blank"
+              rel="noreferrer"
+            >
               Official Website
             </Button>
           </Card>
         ) : null
-      )
-    )}
-  </TournamentsWrapper>
-);
-}
-
+      )}
+    </TournamentsWrapper>
+  );
+};
 
 export default TournamentsList;
