@@ -105,7 +105,7 @@ function App() {
     }
   };
 
-  /*const fetchEvaluation = async (fen) => {
+  const fetchEvaluation = async (fen) => {
     const endpoint = `https://stockfish.broadcastsofcbi.live/evaluate?fen=${encodeURIComponent(
       fen
     )}`;
@@ -114,8 +114,8 @@ function App() {
       throw new Error("Network response was not ok");
     }
     return await response.json();
-  }; */
-  const fetchEvaluation = async (fen) => {
+  }; 
+ /* const fetchEvaluation = async (fen) => {
   const endpoint = `https://stockfish.online/api/s/v2.php?fen=${encodeURIComponent(fen)}&depth=15`;
 
   const response = await fetch(endpoint, { method: "GET", mode: "cors" });
@@ -137,7 +137,7 @@ function App() {
   } else {
     throw new Error("Evaluation request was not successful");
   }
-};
+};*/
 
   
 
