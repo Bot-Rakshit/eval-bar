@@ -26,7 +26,7 @@ function EvalBar({
     setDisplayBlunder(true);
     setTimeout(() => {
       setDisplayBlunder(false);
-    }, 60000);
+    }, 20000);
   };
 
   useEffect(() => {
