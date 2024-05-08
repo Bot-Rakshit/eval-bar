@@ -179,37 +179,32 @@ function TournamentsList({ onSelect }) {
   };
 
 
-  return (
   <TournamentsWrapper>
-    <Title>LIVE BROADCASTS</Title>
-    <SearchWrapper>
-      <SearchInput
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search tournaments..."
-      />
-      <SearchButton onClick={handleSearch}>Search</SearchButton>
+      <Title>LIVE BROADCASTS</Title>
+      <SearchWrapper>
+        <SearchInput
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search tournaments..."
+        />
+        <SearchButton onClick={handleSearch}>Search</SearchButton>
 
-      <SearchInput
-        value={customUrl}
-        onChange={handleCustomUrlChange}
-        placeholder="Enter custom Lichess URL..."
-      />
-      <SearchButton onClick={onSelectTournament}>Go</SearchButton>
-    </SearchWrapper>
-    <Button
-      onClick={() => {
-        onSelect(selectedTournaments);
-        setSelectedTournaments([]);
-      }}
-    >
-      Confirm
-    </Button>
-
-    { broadcasts === false ? (
-      <NoBroadcastsMessage>No ongoing broadcasts</NoBroadcastsMessage>
-    ) : (
-      filteredTournaments.map((tournament, index) =>
+        <SearchInput
+          value={customUrl}
+          onChange={handleCustomUrlChange}
+          placeholder="Enter custom Lichess URL..."
+        />
+        <SearchButton onClick={onSelectTournament}>Go</SearchButton>
+      </SearchWrapper>
+      <Button
+        onClick={() => {
+          onSelect(selectedTournaments);
+          setSelectedTournaments([]);
+        }}
+      >
+        Confirm
+      </Button>
+      {filteredTournaments.map((tournament, index) =>
         tournament.tour && tournament.rounds && tournament.rounds.length > 0 ? (
           <Card
             key={tournament.tour.id}
