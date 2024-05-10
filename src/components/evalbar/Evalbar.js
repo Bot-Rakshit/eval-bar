@@ -166,7 +166,7 @@ function EvalBar({
           fontSize: "1rem",
         }}
       >
-        {lastFEN && " #" + getLastMove(lastFEN)}
+        {lastFEN && getLastMove(lastFEN)+ "."}
       </div>
 
       <Typography
