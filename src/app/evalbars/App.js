@@ -105,10 +105,11 @@ function App() {
     }
   };
 
-  const fetchEvaluation = async (fen) => {
-  const endpoint = "https://chess-api.com/v1"; // Your API endpoint
+  const fetchEvaluation = async (fen, depth = 12) => {
+  const endpoint = "https://chess-api.com/v1";
   const requestData = {
     fen: fen,
+    depth: 18, // Set your desired depth here, up to a maximum of 18
   };
 
   try {
@@ -125,9 +126,7 @@ function App() {
     }
 
     const data = await response.json();
-
-    // Assuming the response format is standardized, you can access evaluation like this:
-    const evaluation = data.eval; // Adjust this based on your actual response structure
+    const evaluation = data.eval; // Adjust based on actual API response structure
 
     return { evaluation };
   } catch (error) {
@@ -135,6 +134,7 @@ function App() {
     throw new Error("Evaluation request failed");
   }
 };
+
 
   
 
