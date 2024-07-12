@@ -105,36 +105,39 @@ function App() {
     }
   };
 
-  const fetchEvaluation = async (fen, depth = 12) => {
-  const endpoint = "https://chess-api.com/v1";
-  const requestData = {
-    fen: fen,
-    depth: 18, // Set your desired depth here, up to a maximum of 18
-  };
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestData),
-    });
-
+  /*const fetchEvaluation = async (fen) => {
+    const endpoint = `https://stockfish.broadcastsofcbi.live/evaluate?fen=${encodeURIComponent(
+      fen
+    )}`;
+    const response = await fetch(endpoint, { method: "GET", mode: "cors" });
     if (!response.ok) {
       throw new Error("Network response was not ok");
     }
+    return await response.json();
+  }; */
+  const fetchEvaluation = async (fen) => {
+  const endpoint = `https://stockfish.online/api/s/v2.php?fen=${encodeURIComponent(fen)}&depth=15`;
 
-    const data = await response.json();
-    const evaluation = data.eval; // Adjust based on actual API response structure
+  const response = await fetch(endpoint, { method: "GET", mode: "cors" });
 
-    return { evaluation };
-  } catch (error) {
-    console.error("Error fetching evaluation:", error);
-    throw new Error("Evaluation request failed");
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+
+  const data = await response.json();
+
+  if (data.success) {
+    return {
+      evaluation: data.evaluation,
+      mate: data.mate,
+      bestMove: data.bestmove.split(' ')[1],
+      ponder: data.bestmove.split(' ')[3],
+      continuation: data.continuation,
+    };
+  } else {
+    throw new Error("Evaluation request was not successful");
   }
 };
-
 
   
 
