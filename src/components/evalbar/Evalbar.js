@@ -36,7 +36,7 @@ function EvalBar({
 
       const isBlunder = (prevEval, currentEval) => {
         if (prevEval >= -4 && prevEval <= 4) {
-          if (Math.abs(currentEval - prevEval) >= 1.2) {
+          if (Math.abs(currentEval - prevEval) >= 2) {
             return true;
           }
         }
