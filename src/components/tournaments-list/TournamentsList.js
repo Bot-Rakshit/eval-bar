@@ -178,8 +178,23 @@ const TournamentsList = ({ onSelect }) => {
 
   const onSelectTournament = () => {
     if (tournamentId) {
-      setSelectedTournaments([tournamentId]);
-      onSelect([tournamentId]); // This line is added to simulate the selection
+      const selectedTournament = tournaments.find(t => t.tour.id === tournamentId);
+      if (selectedTournament) {
+        const ongoingRound = selectedTournament.rounds.find(round => round.ongoing === true) || selectedTournament.rounds[0];
+        if (ongoingRound) {
+          onSelect({
+            tournamentId: tournamentId,
+            roundId: ongoingRound.id,
+            gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+          });
+        } else {
+          console.error("No round found for the selected tournament");
+        }
+      } else {
+        console.error("Selected tournament not found");
+      }
+    } else {
+      console.error("No tournament ID selected");
     }
   };
 
@@ -201,15 +216,7 @@ const TournamentsList = ({ onSelect }) => {
         />
         <SearchButton onClick={onSelectTournament}>Go</SearchButton>
       </SearchWrapper>
-      <Button
-        onClick={() => {
-          onSelect(selectedTournaments);
-          setSelectedTournaments([]);
-        }}
-      >
-        Confirm
-      </Button>
-      {filteredTournaments.map((tournament, index) =>
+      {filteredTournaments.map((tournament) =>
         tournament.tour && tournament.rounds && tournament.rounds.length > 0 ? (
           <Card
             key={tournament.tour.id}
@@ -232,13 +239,13 @@ const TournamentsList = ({ onSelect }) => {
                 }));
                 const ongoingRound = tournament.rounds.find(
                   (round) => round.ongoing === true
-                );
+                ) || tournament.rounds[0];
                 if (ongoingRound) {
-                  setSelectedTournaments((prevTournaments) =>
-                    prevTournaments.includes(ongoingRound.id)
-                      ? prevTournaments.filter((id) => id !== ongoingRound.id)
-                      : [...prevTournaments, ongoingRound.id]
-                  );
+                  onSelect({
+                    tournamentId: tournament.tour.id,
+                    roundId: ongoingRound.id,
+                    gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+                  });
                 }
               }}
             />

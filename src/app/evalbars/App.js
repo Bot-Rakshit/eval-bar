@@ -92,9 +92,24 @@ function App() {
   const { stateData } = useParams();
   const navigate = useNavigate();
 
+  const [isBroadcastMode, setIsBroadcastMode] = useState(false);
+
+  const [isGameDataLoaded, setIsGameDataLoaded] = useState(false);
+  const [lastBlunderTime, setLastBlunderTime] = useState(0);
+  const blunderCooldown = 10000; // 10 seconds cooldown between blunders
+
   const handleBlunder = (linkIndex) => {
+    const currentTime = Date.now();
+    if (!isGameDataLoaded || currentTime - lastBlunderTime < blunderCooldown) {
+      return; // Don't trigger blunder if game data isn't loaded or we're in cooldown
+    }
+
     setBlunderAlertLinks((prevLinks) => [...prevLinks, linkIndex]);
-    blunderSoundRef.current.play();
+    setLastBlunderTime(currentTime);
+
+    if (blunderSoundRef.current) {
+      blunderSoundRef.current.play().catch(error => console.error("Error playing sound:", error));
+    }
 
     setTimeout(() => {
       setBlunderAlertLinks((prevLinks) =>
@@ -137,36 +152,71 @@ function App() {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
   };
 
-  const handleTournamentSelection = async (tournamentIds) => {
-    console.log("Received Tournament IDs:", tournamentIds);
+  const handleTournamentSelection = async (selectedTournament) => {
+    console.log("Received Tournament Data:", selectedTournament);
     setIsBroadcastLoaded(true);
     setIsChromaBackground(true);
-    tournamentIds.forEach((tournamentId) => startStreaming(tournamentId));
+    
+    if (selectedTournament && selectedTournament.roundId) {
+      setBroadcastIDs([selectedTournament.roundId]);
+      
+      const initialLinks = selectedTournament.gameIDs.map(gameID => {
+        const [whitePlayer, blackPlayer] = gameID.split("-vs-");
+        return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null };
+      });
+      setLinks(initialLinks);
+
+      startStreaming(selectedTournament.roundId);
+    } else {
+      console.error("No valid tournament or round selected");
+    }
   };
 
-  const startStreaming = async (tournamentId) => {
-    if (abortControllers.current[tournamentId])
-      abortControllers.current[tournamentId].abort();
-    abortControllers.current[tournamentId] = new AbortController();
+  const startStreaming = async (roundId) => {
+    if (!roundId) {
+      console.error("No roundId provided for streaming");
+      return;
+    }
 
-    const streamURL = `https://lichess.org/api/stream/broadcast/round/${tournamentId}.pgn`;
-    const response = await fetch(streamURL, {
-      signal: abortControllers.current[tournamentId].signal,
-    });
-    console.log("Stream URL:", streamURL);
-    const reader = response.body.getReader();
-    document.body.classList.add("chroma-background");
+    if (abortControllers.current[roundId]) {
+      abortControllers.current[roundId].abort();
+    }
+    abortControllers.current[roundId] = new AbortController();
 
-    const processStream = async () => {
-      const { done, value } = await reader.read();
-      if (done) return;
+    const streamURL = `https://lichess.org/api/stream/broadcast/round/${roundId}.pgn`;
+    try {
+      const response = await fetch(streamURL, {
+        signal: abortControllers.current[roundId].signal,
+      });
+      console.log("Stream URL:", streamURL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const reader = response.body.getReader();
+      document.body.classList.add("chroma-background");
 
-      allGames.current += new TextDecoder().decode(value);
-      updateEvaluations();
-      fetchAvailableGames();
-      setTimeout(processStream, 10);
-    };
-    processStream();
+      const processStream = async () => {
+        try {
+          const { done, value } = await reader.read();
+          if (done) return;
+
+          const newData = new TextDecoder().decode(value);
+          allGames.current += newData;
+          await updateEvaluations();
+          fetchAvailableGames();
+          setTimeout(processStream, 10);
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error("Error processing stream:", error);
+          }
+        }
+      };
+      processStream();
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error("Error starting stream:", error);
+      }
+    }
   };
 
   const fetchAvailableGames = () => {
@@ -294,43 +344,49 @@ function App() {
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
           const evalData = await fetchEvaluation(currentFEN);
-          setLinks((prevLinks) => {
-            const updatedLinks = [...prevLinks];
-            const idx = updatedLinks.findIndex(
-              (l) =>
-                l.whitePlayer === link.whitePlayer &&
-                l.blackPlayer === link.blackPlayer
-            );
-            if (idx !== -1) {
-              updatedLinks[idx] = {
-                ...link,
-                evaluation: evalData.evaluation,
-                lastFEN: currentFEN,
-                result: gameResult,
-              };
-            }
-            return updatedLinks;
-          });
+          return {
+            ...link,
+            evaluation: evalData.evaluation,
+            lastFEN: currentFEN,
+            result: gameResult,
+          };
         }
       } catch (error) {
         console.error("Error loading PGN:", error);
       }
     }
+
+    // If no update was made, return the original link
+    return link;
   };
 
   const updateEvaluations = async () => {
+    console.log("Updating evaluations for links:", links);
     for (let link of links) {
-      await updateEvaluationsForLink(link);
+      try {
+        const updatedLink = await updateEvaluationsForLink(link);
+        if (updatedLink && updatedLink.whitePlayer && updatedLink.blackPlayer) {
+          setLinks(prevLinks => prevLinks.map(l => 
+            l.whitePlayer === updatedLink.whitePlayer && l.blackPlayer === updatedLink.blackPlayer ? updatedLink : l
+          ));
+
+          // Check for blunder only if game data is loaded and we have a previous evaluation
+          if (isGameDataLoaded && link.evaluation !== null && Math.abs(updatedLink.evaluation - link.evaluation) > 2) {
+            handleBlunder(links.indexOf(link));
+          }
+        }
+      } catch (error) {
+        console.error("Error updating evaluation for link:", link, error);
+      }
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
   };
 
   const handleGenerateLink = () => {
     const stateData = {
-      broadcastIDs,
-      selectedGames,
+      broadcastIDs: broadcastIDs,
+      gameIDs: links.map(link => `${link.whitePlayer}-vs-${link.blackPlayer}`),
       customStyles,
-      links,
     };
 
     const serializedData = btoa(JSON.stringify(stateData));
@@ -340,7 +396,15 @@ function App() {
     
     // Copy to clipboard
     navigator.clipboard.writeText(`${window.location.origin}${uniqueLink}`)
-      .then(() => alert("Link copied to clipboard!"))
+      .then(() => {
+        alert("Link copied to clipboard!");
+        // Start streaming for each broadcast ID if not already streaming
+        broadcastIDs.forEach(id => {
+          if (!abortControllers.current[id]) {
+            startStreaming(id);
+          }
+        });
+      })
       .catch((err) => console.error("Failed to copy link:", err));
   };
 
@@ -364,26 +428,65 @@ function App() {
 
   useEffect(() => {
     if (stateData) {
+      setIsBroadcastMode(true);
       try {
         const decodedData = JSON.parse(atob(stateData));
+        console.log("Decoded state data:", decodedData);
         setBroadcastIDs(decodedData.broadcastIDs);
-        setSelectedGames(decodedData.selectedGames);
         setCustomStyles(decodedData.customStyles);
         
         setIsBroadcastLoaded(true);
         
-        if (decodedData.links) {
-          setLinks(decodedData.links);
+        // Initialize links based on gameIDs
+        if (Array.isArray(decodedData.gameIDs)) {
+          const initialLinks = decodedData.gameIDs.map(gameID => {
+            const [whitePlayer, blackPlayer] = gameID.split("-vs-");
+            return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null };
+          });
+          setLinks(initialLinks);
+          console.log("Initialized links:", initialLinks);
+        } else {
+          console.error("gameIDs is not an array:", decodedData.gameIDs);
+          setLinks([]);
         }
         
-        decodedData.broadcastIDs.forEach(id => startStreaming(id));
+        // Abort any existing streams
+        Object.values(abortControllers.current).forEach(controller => controller.abort());
+        abortControllers.current = {};
+
+        // Start streaming for each broadcast ID
+        if (decodedData.broadcastIDs.length > 0) {
+          console.log("Starting streams for broadcast IDs:", decodedData.broadcastIDs);
+          decodedData.broadcastIDs.forEach(id => startStreaming(id));
+        } else {
+          console.error("No broadcast IDs found");
+        }
+
+        // Set up an interval to periodically update evaluations
+        const updateInterval = setInterval(() => {
+          updateEvaluations();
+        }, 20000); // Check every 5 seconds
+
+        // Clean up function
+        return () => {
+          clearInterval(updateInterval);
+          // Abort all ongoing fetch requests
+          Object.values(abortControllers.current).forEach(controller => controller.abort());
+        };
       } catch (error) {
         console.error("Error parsing state from URL", error);
       }
     }
-  }, [stateData]);
+  }, [stateData]);  // Add stateData as a dependency
 
-  const isBroadcastMode = !!stateData;
+  useEffect(() => {
+    // Delay the start of blunder checking
+    const timer = setTimeout(() => {
+      setIsGameDataLoaded(true);
+    }, 5000); // 5 seconds delay
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (isBroadcastMode) {
     return (
@@ -394,7 +497,7 @@ function App() {
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '2px',
+              gap: '10px',
               width: '40%',
             }}
           >
@@ -497,8 +600,8 @@ function App() {
         className="eval-bars-container"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)', // This ensures 2 columns
-          gap: '2px', // Reduced from 10px to 2px for minimal gap
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: '2px',
           width: '40%'
         }}
       >

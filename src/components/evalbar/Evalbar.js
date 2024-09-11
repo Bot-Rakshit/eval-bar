@@ -68,10 +68,21 @@ function EvalBar({
   };
 
   const getWhiteBarWidth = () => {
+    if (result === "1-0") return "100%";
+    if (result === "0-1") return "0%";
+    if (result === "1/2-1/2") return "50%";
+    
     if (evaluation >= 99) return "100%";
     if (evaluation >= 4) return "90%";
     if (evaluation <= -4) return "10%";
     return `${50 + getBarSegment(evaluation) * 7.5}%`;
+  };
+
+  const getDisplayEvaluation = () => {
+    if (result === "1-0") return 10.0;
+    if (result === "0-1") return -10.0;
+    if (result === "1/2-1/2") return 0.0;
+    return evaluation;
   };
 
   const formatName = (name) => {
@@ -109,8 +120,8 @@ function EvalBar({
     return evalValue;
   };
 
-  const displayResult =
-    result !== null ? formatEvaluation(result) : formatEvaluation(evaluation);
+  const displayResult = result !== null ? result : formatEvaluation(getDisplayEvaluation());
+
   const evalDisplayClass = result !== null ? "result" : "evaluation-value";
 
   return (
@@ -119,14 +130,19 @@ function EvalBar({
       style={{
         background: customStyles.evalContainerBg,
         border: `1px solid ${customStyles.evalContainerBorderColor}`,
-        // rounded corners
         borderRadius: "6px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "2px", // Reduced from 4px
+        height: "auto", // Allow the container to adjust its height based on content
       }}
     >
       <Box
         className="player-names"
         display="flex"
         justifyContent="space-between"
+        style={{ marginBottom: "1px" }} // Add a small margin at the bottom
       >
         <Typography
           variant="h6"
@@ -134,8 +150,8 @@ function EvalBar({
           style={{
             background: customStyles.whitePlayerColor,
             color: customStyles.whitePlayerNameColor,
-            fontSize: "1.1rem", // Reduced from 1.3rem
-            padding: "6px 13px",
+            fontSize: "1.1rem",
+            padding: "2px 8px", // Reduced vertical padding
             maxWidth: "45%",
           }}
         >
@@ -147,84 +163,76 @@ function EvalBar({
           style={{
             background: customStyles.blackPlayerColor,
             color: customStyles.blackPlayerNameColor,
-            fontSize: "1.1rem", // Reduced from 1.3rem
-            padding: "6px 13px",
+            fontSize: "1.1rem",
+            padding: "2px 8px", // Reduced vertical padding
             maxWidth: "45%",
           }}
         >
           <b>{formatName(blackPlayer)}</b>
         </Typography>
       </Box>
-      <div
+
+      <Box
         style={{
-          textAlign: "center",
-          position: "absolute",
-          color: "white",
-          top: "0px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          fontSize: "1rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          flexGrow: 1,
+          minHeight: "30px", // Reduced from 40px
         }}
       >
-        {lastFEN && getLastMove(lastFEN)+ "."}
-      </div>
-
-      <Typography
-        variant="h7"
-        className={evalDisplayClass}
-        style={{
-          marginTop: result !== null ? "7px" : "7px",
-          marginBottom: "5px",
-          fontSize: "19px",
-          color: result !== null ? "white" : "black",
-          fontWeight: "bold",
-          position: "absolute",
-          zIndex: 1,
-          left: "50%",
-          transform:
-            result !== null
-              ? "translateX(calc(-50% + 0px))"
-              : "translateX(-50%)",
-        }}
-      >
-        {displayResult}
-      </Typography>
-
-      {!result && (
-        <Box
-          className="eval-bars"
+        <Typography
+          variant="h7"
+          className={result !== null ? "result" : "evaluation-value"}
           style={{
-            height: "20px", // Reduce this value to match the CSS change
-            borderRadius: "10px", // Adjust this to half of the new height
-            background: customStyles.blackBarColor,
-            overflow: "hidden",
-            margin: "5px 0",
-            position: "relative",
-            zIndex: 0,
+            fontSize: "19px",
+            color: result !== null ? "white" : "black",
+            fontWeight: "bold",
+            zIndex: 1,
+            marginBottom: "2.5px", // Reduced from 2px
           }}
         >
+          {result !== null ? result : formatEvaluation(getDisplayEvaluation())}
+        </Typography>
+
+        {result === null && (
           <Box
-            className="white-bar"
+            className="eval-bars"
             style={{
-              width: getWhiteBarWidth(),
-              background: customStyles.whiteBarColor,
+              height: "18px", // Slightly reduced from 20px
+              width: "100%",
+              borderRadius: "8px",
+              background: customStyles.blackBarColor,
+              overflow: "hidden",
+              position: "relative",
+              zIndex: 0,
             }}
-          ></Box>
-          <Box className="zero-marker"></Box>
-        </Box>
-      )}
+          >
+            <Box
+              className="white-bar"
+              style={{
+                width: getWhiteBarWidth(),
+                background: customStyles.whiteBarColor,
+                height: "100%",
+              }}
+            ></Box>
+            <Box className="zero-marker"></Box>
+          </Box>
+        )}
+      </Box>
+
       <audio ref={blunderSoundRef} src={blunderSound} />
 
       {displayBlunder && (
         <div
           style={{
             borderRadius: "50%",
-            padding: "2px",
+            padding: "0px",
             background: "red",
             position: "absolute",
             top: "0px",
             right: "0px",
-            // bouncing animation for 10 seconds
             animation: "pulse 1.5s infinite",
             fontSize: "12px",
           }}

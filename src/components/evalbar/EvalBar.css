@@ -6,38 +6,27 @@
   box-shadow: 0 4px 10px rgba(10, 9, 9, 0);
   position: relative;
   height: auto;
-}
-
-.evaluation-value {
-  font-weight: bold;
-  color: rgb(0, 0, 0);
-  font-size: 11px; /* Adjusted font size */
-  margin-top: 9px; /* Moved above the player names */
-  margin-bottom: 5px;
-  position: absolute; /* Position absolutely */
-  top: 51%; /* Align to the top */
-  left: 50%; /* Center horizontally */
-  transform: translateX(-50%); /* Center horizontally */
-  z-index: 1; /* Ensure it's above bars */
+  display: flex;
+  flex-direction: column;
 }
 
 .player-names {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  margin-bottom: 4px; /* Reduced margin for compactness */
+  margin-bottom: 1px; /* Reduced from 0px */
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  overflow: hidden; /* Add this line */
+  overflow: hidden;
 }
 
 .white-player, .black-player {
   flex: 1;
-  padding: 2px 8px;
   border-radius: 3px;
-  font-size: 11px; /* Reduced from 12px */
+  font-size: 13px; /* Increased from 11px */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 2px 4px; /* Added padding */
 }
 
 .white-player {
@@ -45,7 +34,6 @@
   color: black;
   text-align: left;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  
 }
 
 .black-player {
@@ -59,35 +47,42 @@
   position: relative;
   display: flex;
   width: 100%;
-  height: 20px; /* Reduce this value from 30px to your desired height */
+  height: 24px; /* Increased from 20px */
   background-color: #000000;
-  border-radius: 10px; /* Adjust this to half of the new height for rounded corners */
+  border-radius: 10px;
   overflow: hidden;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  margin-top: 1px; /* Added small margin */
+  margin-bottom: 0px;
 }
 
 .white-bar {
   position: absolute;
   left: 0;
-  height: 100%; /* This ensures the white bar fills the full height of its container */
+  height: 100%;
   background-color: #ffffff;
   transition: width 1.2s;
 }
 
-.result-value {
-  font-weight: bold;
-  color: rgb(255, 255, 255); /* Set the text color to white for result */
-  font-size: 18px;
-  top: 100%; /* Align to the top */
-  left: 15%;
-  background-size: 300px;
-}
-
 .evaluation-value {
   font-weight: bold;
-  color: black; /* Set the text color to black for evaluation */
+  color: black;
+  font-size: 13px; /* Increased from 11px */
+  position: absolute;
+  top: 84%; /* Adjusted from 83% */
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.result-value {
+  font-weight: bold;
+  color: rgb(255, 255, 255);
   font-size: 18px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
 }
 
 .eval-container.blink-border {
