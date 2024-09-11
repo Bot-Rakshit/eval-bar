@@ -1,16 +1,12 @@
 .eval-container {
-  flex-wrap: wrap; /* Allow containers to wrap to the next line */
-  padding: 3px; /* Adjusted padding for a more compact look */
-  width: 95%;  /* Each container occupies 25% of the parent container */
-  margin: 5px;  /* Adjusted for horizontal and vertical spacing */
-  padding: 5px;
+  width: 94%;
+  padding: 2px;
   background: linear-gradient(90deg, rgb(65, 63, 63) 50%, rgb(55, 53, 53) 89%);
-  border-radius: 1px; /* Sharper borders */
+  border-radius: 6px;
   box-shadow: 0 4px 10px rgba(10, 9, 9, 0);
-  position: relative;/* Include padding and border in width calculation */
-  height:auto;
+  position: relative;
+  height: auto;
 }
-
 
 .evaluation-value {
   font-weight: bold;
@@ -31,13 +27,17 @@
   width: 100%;
   margin-bottom: 4px; /* Reduced margin for compactness */
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  overflow: hidden; /* Add this line */
 }
 
 .white-player, .black-player {
   flex: 1;
-  padding: 2px 8px; /* Adjusted padding for sleeker design */
-  border-radius: 3px; /* Sharper borders */
-  font-size: 12px; /* Smaller font size for sleeker design */
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px; /* Reduced from 12px */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .white-player {
@@ -58,10 +58,10 @@
 .eval-bars {
   position: relative;
   display: flex;
-  width: 100%; /* Change this to the desired width for the bars */
-  height: 11px;
+  width: 100%;
+  height: 20px; /* Reduce this value from 30px to your desired height */
   background-color: #000000;
-  border-radius: 20px;
+  border-radius: 10px; /* Adjust this to half of the new height for rounded corners */
   overflow: hidden;
   margin-top: 5px;
   margin-bottom: 5px;
@@ -70,7 +70,7 @@
 .white-bar {
   position: absolute;
   left: 0;
-  height: 100%;
+  height: 100%; /* This ensures the white bar fills the full height of its container */
   background-color: #ffffff;
   transition: width 1.2s;
 }

@@ -77,31 +77,24 @@ function EvalBar({
   const formatName = (name) => {
     // Remove commas and other unwanted characters
     const cleanedName = name.replace(/[,.;]/g, "").trim();
-    const parts = cleanedName.split(" ").filter((part) => part.length > 0); // Filter empty parts
+    const parts = cleanedName.split(" ").filter((part) => part.length > 0);
 
     // Special cases:
-    if (parts.includes("Praggnanandhaa")) {
-      return "Pragg";
-    }
-    if (parts.includes("Nepomniachtchi")) {
-      return "Nepo";
-    }
-    if (parts.includes("Goryachkina")) {
-      return "Gorya";
-    }
-    if (parts.includes("Gukesh")) {
-      return "Gukesh"; // final round of candidates 
-    }
+    if (parts.includes("Praggnanandhaa")) return "Pragg";
+    if (parts.includes("Nepomniachtchi")) return "Nepo";
+    if (parts.includes("Goryachkina")) return "Gorya";
+    if (parts.includes("Gukesh")) return "Gukesh";
 
     // Find the shortest name
-    let shortestName = parts[0] || ""; // Initialize with empty string
+    let shortestName = parts[0] || "";
     for (let i = 1; i < parts.length; i++) {
       if (parts[i].length < shortestName.length) {
         shortestName = parts[i];
       }
     }
 
-    return shortestName;
+    // Increase the character limit to 10
+    return shortestName.slice(0, 10);
   };
 
   const formatEvaluation = (evalValue) => {
@@ -136,8 +129,9 @@ function EvalBar({
           style={{
             background: customStyles.whitePlayerColor,
             color: customStyles.whitePlayerNameColor,
-            fontSize: "1.3rem",
+            fontSize: "1.1rem", // Reduced from 1.3rem
             padding: "6px 13px",
+            maxWidth: "45%",
           }}
         >
           <b>{formatName(whitePlayer)}</b>
@@ -148,8 +142,9 @@ function EvalBar({
           style={{
             background: customStyles.blackPlayerColor,
             color: customStyles.blackPlayerNameColor,
-            fontSize: "1.3rem",
+            fontSize: "1.1rem", // Reduced from 1.3rem
             padding: "6px 13px",
+            maxWidth: "45%",
           }}
         >
           <b>{formatName(blackPlayer)}</b>
@@ -194,8 +189,8 @@ function EvalBar({
         <Box
           className="eval-bars"
           style={{
-            height: "30px",
-            borderRadius: "15px",
+            height: "20px", // Reduce this value to match the CSS change
+            borderRadius: "10px", // Adjust this to half of the new height
             background: customStyles.blackBarColor,
             overflow: "hidden",
             margin: "5px 0",

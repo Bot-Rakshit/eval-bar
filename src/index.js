@@ -10,6 +10,7 @@ ReactDOM.render(
         <Route path="/" element={<LandingPage />} />
         <Route path="/evalbars" element={<App />} />
         <Route path="/ccm" element={<Ccm />} />
+        <Route path="/broadcast/:stateData" element={<App />} />
       </Routes>
     </Router>
   </React.StrictMode>,

@@ -5,6 +5,7 @@ import { Chess } from "chess.js";
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import blunderSound from "../../assets/blunder-sound.mp3";
+import { useParams, useNavigate } from "react-router-dom";
 
 const theme = createTheme({
   palette: {
@@ -87,6 +88,9 @@ function App() {
 
   const allGames = useRef("");
   const abortControllers = useRef({});
+
+  const { stateData } = useParams();
+  const navigate = useNavigate();
 
   const handleBlunder = (linkIndex) => {
     setBlunderAlertLinks((prevLinks) => [...prevLinks, linkIndex]);
@@ -338,11 +342,16 @@ function App() {
       broadcastIDs,
       selectedGames,
       customStyles,
+      links,
     };
 
-    const serializedData = encodeURIComponent(JSON.stringify(stateData));
-    navigator.clipboard
-      .writeText(`${window.location.origin}/broadcast/${serializedData}`)
+    const serializedData = btoa(JSON.stringify(stateData));
+    const uniqueLink = `/broadcast/${serializedData}`;
+    
+    navigate(uniqueLink);
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(`${window.location.origin}${uniqueLink}`)
       .then(() => alert("Link copied to clipboard!"))
       .catch((err) => console.error("Failed to copy link:", err));
   };
@@ -366,22 +375,61 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const stateParam = queryParams.get("state");
-
-    if (stateParam) {
+    if (stateData) {
       try {
-        const { broadcastIDs, selectedGames, customStyles } = JSON.parse(
-          decodeURIComponent(stateParam)
-        );
-        setBroadcastIDs(broadcastIDs);
-        setSelectedGames(selectedGames);
-        setCustomStyles(customStyles);
+        const decodedData = JSON.parse(atob(stateData));
+        setBroadcastIDs(decodedData.broadcastIDs);
+        setSelectedGames(decodedData.selectedGames);
+        setCustomStyles(decodedData.customStyles);
+        
+        setIsBroadcastLoaded(true);
+        
+        if (decodedData.links) {
+          setLinks(decodedData.links);
+        }
+        
+        decodedData.broadcastIDs.forEach(id => startStreaming(id));
       } catch (error) {
         console.error("Error parsing state from URL", error);
       }
     }
-  }, []);
+  }, [stateData]);
+
+  const isBroadcastMode = !!stateData;
+
+  if (isBroadcastMode) {
+    return (
+      <ThemeProvider theme={theme}>
+        <div className="chroma-background" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <Box
+            className="eval-bars-container"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '2px',
+              width: '40%',
+            }}
+          >
+            {links.map((link, index) => (
+              <EvalBar
+                key={index}
+                evaluation={link.evaluation}
+                whitePlayer={link.whitePlayer}
+                blackPlayer={link.blackPlayer}
+                result={link.result}
+                layout={layout}
+                lastFEN={link.lastFEN}
+                customStyles={customStyles}
+                alert={blunderAlertLinks.includes(index)}
+                onBlunder={() => handleBlunder(index)}
+              />
+            ))}
+          </Box>
+          <audio ref={blunderSoundRef} src={blunderSound} />
+        </div>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -422,7 +470,7 @@ function App() {
             <Button
               variant="contained"
               color="primary"
-              style={{ marginTop: "10px" }}
+              style={{ marginTop: "10px", marginRight: "10px" }}
               onClick={addSelectedGames}
             >
               Add Selected Games Bar
@@ -430,10 +478,18 @@ function App() {
             <Button
               variant="contained"
               color="secondary"
-              style={{ marginTop: "10px" }}
+              style={{ marginTop: "10px", marginRight: "10px" }}
               onClick={handleDemoBlunder}
             >
               Demo Blunder
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ marginTop: "10px" }}
+              onClick={handleGenerateLink}
+            >
+              Create Unique Link
             </Button>
             <CustomizeEvalBar
               customStyles={customStyles}
@@ -448,33 +504,30 @@ function App() {
       </Container>
 
       <Box
-        mt={5}
-        px={4}
+        mt={2}
+        px={2}
         className="eval-bars-container"
-        style={{ width: "100%" }}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)', // This ensures 2 columns
+          gap: '2px', // Reduced from 10px to 2px for minimal gap
+          width: '40%'
+        }}
       >
-        <Box
-          display="flex"
-          flexWrap="wrap"
-          justifyContent="center"
-          width="100%"
-        >
-          {links.map((link, index) => (
-            <Box key={index} style={{ flex: "0 0 14%", maxWidth: "25%" }}>
-              <EvalBar
-                evaluation={link.evaluation}
-                whitePlayer={link.whitePlayer}
-                blackPlayer={link.blackPlayer}
-                result={link.result}
-                layout={layout}
-                lastFEN={link.lastFEN}
-                customStyles={customStyles}
-                alert={blunderAlertLinks.includes(index)}
-                onBlunder={() => handleBlunder(index)}
-              />
-            </Box>
-          ))}
-        </Box>
+        {links.map((link, index) => (
+          <EvalBar
+            key={index}
+            evaluation={link.evaluation}
+            whitePlayer={link.whitePlayer}
+            blackPlayer={link.blackPlayer}
+            result={link.result}
+            layout={layout}
+            lastFEN={link.lastFEN}
+            customStyles={customStyles}
+            alert={blunderAlertLinks.includes(index)}
+            onBlunder={() => handleBlunder(index)}
+          />
+        ))}
       </Box>
       <audio ref={blunderSoundRef} src={blunderSound} />
     </ThemeProvider>
