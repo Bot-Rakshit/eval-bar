@@ -26,7 +26,7 @@ function EvalBar({
     setDisplayBlunder(true);
     setTimeout(() => {
       setDisplayBlunder(false);
-    }, 20000);
+    }, 10000);
   };
 
   useEffect(() => {
@@ -200,7 +200,7 @@ function EvalBar({
           <Box
             className="eval-bars"
             style={{
-              height: "18px", // Slightly reduced from 20px
+              height: "18 px", // Slightly reduced from 20px
               width: "100%",
               borderRadius: "8px",
               background: customStyles.blackBarColor,
