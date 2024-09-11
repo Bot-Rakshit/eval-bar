@@ -85,12 +85,17 @@ function EvalBar({
     if (parts.includes("Goryachkina")) return "Gorya";
     if (parts.includes("Gukesh")) return "Gukesh";
 
-    // Find the shortest name
+    // Find the shortest name with at least 3 letters
     let shortestName = parts[0] || "";
     for (let i = 1; i < parts.length; i++) {
-      if (parts[i].length < shortestName.length) {
+      if (parts[i].length >= 3 && parts[i].length < shortestName.length) {
         shortestName = parts[i];
       }
+    }
+
+    // If the shortest name is less than 3 letters, use the first name
+    if (shortestName.length < 3) {
+      shortestName = parts[0] || "";
     }
 
     // Increase the character limit to 10
