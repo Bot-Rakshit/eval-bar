@@ -170,7 +170,7 @@ function EvalBar({
         style={{
           marginTop: result !== null ? "7px" : "7px",
           marginBottom: "5px",
-          fontSize: "23px",
+          fontSize: "19px",
           color: result !== null ? "white" : "black",
           fontWeight: "bold",
           position: "absolute",

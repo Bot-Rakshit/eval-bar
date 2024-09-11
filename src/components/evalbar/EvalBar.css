@@ -11,11 +11,11 @@
 .evaluation-value {
   font-weight: bold;
   color: rgb(0, 0, 0);
-  font-size: 12px; /* Adjusted font size */
+  font-size: 11px; /* Adjusted font size */
   margin-top: 9px; /* Moved above the player names */
   margin-bottom: 5px;
   position: absolute; /* Position absolutely */
-  top: 53%; /* Align to the top */
+  top: 51%; /* Align to the top */
   left: 50%; /* Center horizontally */
   transform: translateX(-50%); /* Center horizontally */
   z-index: 1; /* Ensure it's above bars */
