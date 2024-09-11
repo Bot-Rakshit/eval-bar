@@ -154,6 +154,13 @@ const TournamentsList = ({ onSelect }) => {
       );
   }, []);
 
+  useEffect(() => {
+    document.body.classList.add('tournaments-list');
+    return () => {
+      document.body.classList.remove('tournaments-list');
+    };
+  }, []);
+
   const handleSearch = () => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     const filtered = tournaments.filter((tournament) =>

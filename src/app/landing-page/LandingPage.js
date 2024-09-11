@@ -1,7 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import './LandingPage.css';
 
 function LandingPage() {
+  useEffect(() => {
+    document.body.classList.add('landing-page');
+    return () => {
+      document.body.classList.remove('landing-page');
+    };
+  }, []);
+
   return (
     <div className="landing-container">
       <header>
