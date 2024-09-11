@@ -4,7 +4,6 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Chess } from "chess.js";
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
-import blunderSound from "../../assets/blunder-sound.mp3";
 import { useParams, useNavigate } from "react-router-dom";
 
 const theme = createTheme({
@@ -71,7 +70,6 @@ function App() {
   const [availableGames, setAvailableGames] = useState([]);
   const [selectedGames, setSelectedGames] = useState([]);
   const [blunderAlertLinks, setBlunderAlertLinks] = useState([]);
-  const blunderSoundRef = useRef(null);
   const [customStyles, setCustomStyles] = useState({
     evalContainerBg: "#000000",
     blackBarColor: "#E79D29",
@@ -107,15 +105,11 @@ function App() {
     setBlunderAlertLinks((prevLinks) => [...prevLinks, linkIndex]);
     setLastBlunderTime(currentTime);
 
-    if (blunderSoundRef.current) {
-      blunderSoundRef.current.play().catch(error => console.error("Error playing sound:", error));
-    }
-
     setTimeout(() => {
       setBlunderAlertLinks((prevLinks) =>
         prevLinks.filter((index) => index !== linkIndex)
       );
-    }, 40000);
+    }, 10000);
   };
   const handleDemoBlunder = () => {
     if (links.length > 0) {
@@ -516,7 +510,6 @@ function App() {
               />
             ))}
           </Box>
-          <audio ref={blunderSoundRef} src={blunderSound} />
         </div>
       </ThemeProvider>
     );
@@ -620,7 +613,6 @@ function App() {
           />
         ))}
       </Box>
-      <audio ref={blunderSoundRef} src={blunderSound} />
     </ThemeProvider>
   );
 }
