@@ -482,18 +482,92 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (isBroadcastMode) {
-    return (
-      <ThemeProvider theme={theme}>
-        <div className="chroma-background" style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+  return (
+    <ThemeProvider theme={theme}>
+      <Container
+        maxWidth="md"
+        className={isChromaBackground ? "chroma-background" : "dark-background"}
+      >
+        {!isBroadcastMode && (
+          <>
+            <Toolbar>
+              <Box
+                style={{ display: "flex", justifyContent: "center", flexGrow: 1.5 }}
+              >
+                <img
+                  src="https://i.imgur.com/z2fbMtT.png"
+                  alt="ChessBase India Logo"
+                  style={{ height: "100px", marginTop: "20px" }}
+                />
+              </Box>
+            </Toolbar>
+            {isBroadcastLoaded ? (
+              <Box
+                mt={4}
+                px={3}
+                sx={{
+                  backgroundColor: "rgba(50, 67, 100, 1)",
+                  padding: 2,
+                  borderRadius: 2,
+                  marginBottom: 2,
+                }}
+              >
+                {availableGames.map((game, index) => (
+                  <GameCard
+                    key={index}
+                    game={game}
+                    onClick={() => handleGameSelection(game)}
+                    isSelected={selectedGames.includes(game)}
+                  />
+                ))}
+                <Button
+                  variant="contained"
+                  color="primary"
+                  style={{ marginTop: "10px", marginRight: "10px" }}
+                  onClick={addSelectedGames}
+                >
+                  Add Selected Games Bar
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  style={{ marginTop: "10px", marginRight: "10px" }}
+                  onClick={handleDemoBlunder}
+                >
+                  Demo Blunder
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  style={{ marginTop: "10px" }}
+                  onClick={handleGenerateLink}
+                >
+                  Create Unique Link
+                </Button>
+                <CustomizeEvalBar
+                  customStyles={customStyles}
+                  setCustomStyles={setCustomStyles}
+                />
+              </Box>
+            ) : (
+              <div className="full-width">
+                <TournamentsList onSelect={handleTournamentSelection} />
+              </div>
+            )}
+          </>
+        )}
+
+        <Box
+          mt={5}
+          px={4}
+          className="eval-bars-container"
+          style={{ width: "100%" }}
+        >
           <Box
-            className="eval-bars-container"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '10px',
-              width: '40%',
-            }}
+            display="flex"
+            flexWrap="wrap"
+            justifyContent="center"
+            width="100%"
           >
             {links.map((link, index) => (
               <EvalBar
@@ -510,111 +584,8 @@ function App() {
               />
             ))}
           </Box>
-        </div>
-      </ThemeProvider>
-    );
-  }
-
-  return (
-    <ThemeProvider theme={theme}>
-      <Container
-        maxWidth="md"
-        className={isChromaBackground ? "chroma-background" : "dark-background"}
-      >
-        <Toolbar>
-          <Box
-            style={{ display: "flex", justifyContent: "center", flexGrow: 1.5 }}
-          >
-            <img
-              src="https://i.imgur.com/z2fbMtT.png"
-              alt="ChessBase India Logo"
-              style={{ height: "100px", marginTop: "20px" }}
-            />
-          </Box>
-        </Toolbar>
-        {isBroadcastLoaded ? (
-          <Box
-            mt={4}
-            px={3}
-            sx={{
-              backgroundColor: "rgba(50, 67, 100, 1)",
-              padding: 2,
-              borderRadius: 2,
-              marginBottom: 2,
-            }}
-          >
-            {availableGames.map((game, index) => (
-              <GameCard
-                key={index}
-                game={game}
-                onClick={() => handleGameSelection(game)}
-                isSelected={selectedGames.includes(game)}
-              />
-            ))}
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ marginTop: "10px", marginRight: "10px" }}
-              onClick={addSelectedGames}
-            >
-              Add Selected Games Bar
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              style={{ marginTop: "10px", marginRight: "10px" }}
-              onClick={handleDemoBlunder}
-            >
-              Demo Blunder
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ marginTop: "10px" }}
-              onClick={handleGenerateLink}
-            >
-              Create Unique Link
-            </Button>
-            <CustomizeEvalBar
-              customStyles={customStyles}
-              setCustomStyles={setCustomStyles}
-            />
-          </Box>
-        ) : (
-          <div className="full-width">
-            <TournamentsList onSelect={handleTournamentSelection} />
-          </div>
-        )}
-      </Container>
-
-      <Box
-        mt={5}
-        px={4}
-        className="eval-bars-container"
-        style={{ width: "100%" }}
-      >
-        <Box
-          display="flex"
-          flexWrap="wrap"
-          justifyContent="center"
-          width="100%"
-        >
-          {links.map((link, index) => (
-            <EvalBar
-              key={index}
-              evaluation={link.evaluation}
-              whitePlayer={link.whitePlayer}
-              blackPlayer={link.blackPlayer}
-              result={link.result}
-              layout={layout}
-              lastFEN={link.lastFEN}
-              customStyles={customStyles}
-              alert={blunderAlertLinks.includes(index)}
-              onBlunder={() => handleBlunder(index)}
-            />
-          ))}
         </Box>
-      </Box>
+      </Container>
     </ThemeProvider>
   );
 }
