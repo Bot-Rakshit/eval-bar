@@ -588,30 +588,32 @@ function App() {
       </Container>
 
       <Box
-        mt={2}
-        px={2}
+        mt={5}
+        px={4}
         className="eval-bars-container"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '2px',
-          width: '40%'
-        }}
+        style={{ width: "100%" }}
       >
-        {links.map((link, index) => (
-          <EvalBar
-            key={index}
-            evaluation={link.evaluation}
-            whitePlayer={link.whitePlayer}
-            blackPlayer={link.blackPlayer}
-            result={link.result}
-            layout={layout}
-            lastFEN={link.lastFEN}
-            customStyles={customStyles}
-            alert={blunderAlertLinks.includes(index)}
-            onBlunder={() => handleBlunder(index)}
-          />
-        ))}
+        <Box
+          display="flex"
+          flexWrap="wrap"
+          justifyContent="center"
+          width="100%"
+        >
+          {links.map((link, index) => (
+            <EvalBar
+              key={index}
+              evaluation={link.evaluation}
+              whitePlayer={link.whitePlayer}
+              blackPlayer={link.blackPlayer}
+              result={link.result}
+              layout={layout}
+              lastFEN={link.lastFEN}
+              customStyles={customStyles}
+              alert={blunderAlertLinks.includes(index)}
+              onBlunder={() => handleBlunder(index)}
+            />
+          ))}
+        </Box>
       </Box>
     </ThemeProvider>
   );
