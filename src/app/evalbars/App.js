@@ -489,10 +489,13 @@ function App() {
           <Box
             className="eval-bars-container"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '10px',
-              width: '40%',
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              gap: '5px',
+              width: '100%',
+              overflowX: 'auto',
+              padding: '10px',
             }}
           >
             {links.map((link, index) => (
@@ -592,10 +595,13 @@ function App() {
         px={2}
         className="eval-bars-container"
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '2px',
-          width: '40%'
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          gap: '10px',
+          width: '100%',
+          overflowX: 'auto',
+          padding: '10px',
         }}
       >
         {links.map((link, index) => (
