@@ -252,6 +252,9 @@ function App() {
             blackPlayer,
             error: null,
             lastFEN: "",
+            whitetime: 0,
+            blackTime: 0,
+            turn: "",
           },
         ]);
         updateEvaluationsForLink({ whitePlayer, blackPlayer });
@@ -322,6 +325,44 @@ function App() {
         return shortestName;
       };
 
+      // get timers of each move
+      let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
+      clocks = clocks.map(clock => {return clock.split(" ")[1].split("]")[0]});
+
+      // get time control of the game
+      const timeControl = specificGamePgn.match(/\[TimeControl "(.*?)"\]/)[1];
+      let time = timeControl.split(":")[0].split("+")[0];
+      if (time.includes("/")) {
+        time = Number(time.split("/")[1]);
+      }
+
+      const convertClockToSeconds = (clock) => {
+        const time = clock.split(":");
+        const hours = Number(time[0]);
+        const minutes = Number(time[1]);
+        const seconds = Number(time[2]);
+        return (hours*3600) + (minutes*60) + seconds
+      }
+
+      // modify timers of each player
+      let whiteTime = time;
+      let blackTime = time;
+      let turn = "";
+      if (clocks.length >= 2) {
+        if (clocks.length%2) {
+          whiteTime = convertClockToSeconds(clocks[clocks.length-1]);
+          blackTime = convertClockToSeconds(clocks[clocks.length-2]);
+          turn = "black";
+        }else {
+          blackTime = convertClockToSeconds(clocks[clocks.length-1]);
+          whiteTime = convertClockToSeconds(clocks[clocks.length-2]);
+          turn = "white";
+        }
+      }else if (clocks.length == 1) {
+        whiteTime = convertClockToSeconds(clocks[clocks.length-1]);
+        turn = "black";
+      }
+
       let gameResult = null;
       const resultMatch = cleanedPgn.match(/(1-0|0-1|1\/2-1\/2)$/);
       if (resultMatch) {
@@ -343,6 +384,9 @@ function App() {
             evaluation: evalData.evaluation,
             lastFEN: currentFEN,
             result: gameResult,
+            whiteTime,
+            blackTime,
+            turn,
           };
         }
       } catch (error) {
@@ -581,6 +625,9 @@ function App() {
                 customStyles={customStyles}
                 alert={blunderAlertLinks.includes(index)}
                 onBlunder={() => handleBlunder(index)}
+                whiteTime={link.whiteTime}
+                blackTime={link.blackTime}
+                turn={link.turn}
               />
             ))}
           </Box>

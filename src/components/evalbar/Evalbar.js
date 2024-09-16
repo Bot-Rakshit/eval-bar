@@ -14,12 +14,17 @@ function EvalBar({
   alert,
   onBlunder,
   lastFEN,
+  whiteTime,
+  blackTime,
+  turn,
 }) {
   const prevEvaluationRef = useRef(null);
   const prevResultRef = useRef(undefined);
   const blunderSoundRef = useRef(null);
+  const intervalRef = useRef(null);
 
   const [displayBlunder, setDisplayBlunder] = React.useState(false);
+  const [timePassed,setTimePassed] = React.useState(0);
 
   const onBlunderFunction = () => {
     onBlunder();
@@ -62,6 +67,18 @@ function EvalBar({
     }
     prevResultRef.current = result;
   }, [result, onBlunder]);
+
+  // adjusts the time passed after the last move
+  useEffect(() => {
+    clearInterval(intervalRef.current);
+    setTimePassed(0);
+    if (turn !== "" && !result) {
+      intervalRef.current = setInterval(() => {
+        setTimePassed(prevValue => prevValue+1);
+      },1000);
+    }
+    return () => {clearInterval(intervalRef.current)}
+  }, [turn, result]);
 
   const getBarSegment = (evalValue) => {
     return Math.min(Math.max(Math.round(evalValue), -5), +5);
@@ -120,6 +137,19 @@ function EvalBar({
     return evalValue;
   };
 
+  const convertSecondsToClock = (time) => {
+    if (time < 1) {
+      return "0:00:00" // handles out of bounds edge case
+    }
+    let timeLeft = time;
+    const hours = Math.floor(timeLeft/3600);
+    timeLeft = timeLeft%3600;
+    const minutes = Math.floor(timeLeft/60);
+    timeLeft = timeLeft%60;
+    const seconds = timeLeft;
+    return `${hours}:${minutes<10 ? 0 : ""}${minutes}:${seconds<10 ? 0 : ""}${seconds}`
+  }
+
   const displayResult = result !== null ? result : formatEvaluation(getDisplayEvaluation());
 
   const evalDisplayClass = result !== null ? "result" : "evaluation-value";
@@ -169,6 +199,54 @@ function EvalBar({
           }}
         >
           <b>{formatName(blackPlayer)}</b>
+        </Typography>
+      </Box>
+
+      {/*clocks section*/}
+      <Box
+        className="player-names"
+        display="flex"
+        justifyContent="space-between"
+        style={{ marginBottom: "1px" }} // Add a small margin at the bottom
+      >
+        {/*clock's color turns red when the clock reaches 30 seconds otherwise if it is the player's turn it turns lightgreen else color stays as player name color*/}
+        <Typography
+          variant="h6"
+          className="white-player"
+          style={{
+            background: customStyles.whitePlayerColor,
+            color: turn === "white" ? whiteTime - timePassed <= 30 ? "red" : "lightgreen" : whiteTime <= 30 ? "red" : customStyles.whitePlayerNameColor,
+            fontSize: "0.8rem",
+            padding: "2px 8px", // Reduced vertical padding
+            maxWidth: "45%",
+          }}
+        >
+          <b>
+            {
+              turn === "white" ?
+              convertSecondsToClock(whiteTime-timePassed) :
+              convertSecondsToClock(whiteTime)
+            }
+          </b>
+        </Typography>
+        <Typography
+          variant="h6"
+          className="black-player"
+          style={{
+            background: customStyles.blackPlayerColor,
+            color: turn === "black" ? blackTime - timePassed <= 30 ? "red" : "lightgreen" : blackTime <= 30 ? "red" : customStyles.blackPlayerNameColor,
+            fontSize: "0.8rem",
+            padding: "2px 8px", // Reduced vertical padding
+            maxWidth: "45%",
+          }}
+        >
+          <b>
+            {
+              turn === "black" ?
+              convertSecondsToClock(blackTime-timePassed) :
+              convertSecondsToClock(blackTime)
+            }
+          </b>
         </Typography>
       </Box>
 
