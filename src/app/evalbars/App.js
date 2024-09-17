@@ -330,10 +330,13 @@ function App() {
       clocks = clocks.map(clock => {return clock.split(" ")[1].split("]")[0]});
 
       // get time control of the game
-      const timeControl = specificGamePgn.match(/\[TimeControl "(.*?)"\]/)[1];
-      let time = timeControl.split(":")[0].split("+")[0];
-      if (time.includes("/")) {
-        time = Number(time.split("/")[1]);
+      let time = 0;
+      if (specificGamePgn.match(/\[TimeControl "(.*?)"\]/)) {        
+        const timeControl = specificGamePgn.match(/\[TimeControl "(.*?)"\]/)[1];
+        time = timeControl.split(":")[0].split("+")[0];
+        if (time.includes("/")) {
+          time = Number(time.split("/")[1]);
+        }
       }
 
       const convertClockToSeconds = (clock) => {
