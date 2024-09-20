@@ -17,6 +17,7 @@ function EvalBar({
   whiteTime,
   blackTime,
   turn,
+  moveNumber,
 }) {
   const prevEvaluationRef = useRef(null);
   const prevResultRef = useRef(undefined);
@@ -207,15 +208,16 @@ function EvalBar({
         className="player-names"
         display="flex"
         justifyContent="space-between"
+        alignItems="center"
         style={{ marginBottom: "1px" }} // Add a small margin at the bottom
       >
-        {/*clock's color turns red when the clock reaches 30 seconds otherwise if it is the player's turn it turns lightgreen else color stays as player name color*/}
+        {/*clock's color turns red when the clock reaches 30 seconds otherwise if it stays as player name color*/}
         <Typography
           variant="h6"
           className="white-player"
           style={{
             background: customStyles.whitePlayerColor,
-            color: turn === "white" ? whiteTime - timePassed <= 30 ? "red" : "lightgreen" : whiteTime <= 30 ? "red" : customStyles.whitePlayerNameColor,
+            color: (turn === "white" && whiteTime - timePassed <= 30) || whiteTime <= 30 ? "red" : customStyles.whitePlayerNameColor,
             fontSize: "0.8rem",
             padding: "2px 8px", // Reduced vertical padding
             maxWidth: "45%",
@@ -229,12 +231,44 @@ function EvalBar({
             }
           </b>
         </Typography>
+        {/*Left arrow (white turn indicator)*/}
+        <div
+          style={{
+            border: "5px solid transparent",
+            borderRight: "7px solid orange",
+            borderLeftWidth: "0px",
+            opacity: turn === "white" ? 1 : 0.5
+          }}
+        >
+        </div>
+        {/*Move number of player (current turn)*/}
+        <Typography
+          variant="h6"
+          style={{
+            background: customStyles.whitePlayerColor,
+            color: "white",
+            fontSize: "0.8rem",
+            padding: "2px", // Reduced vertical padding
+          }}
+        >
+          <b>{moveNumber}</b>
+        </Typography>
+        {/*Right arrow (black turn indicator)*/}
+        <div
+          style={{
+            border: "5px solid transparent",
+            borderLeft: "7px solid orange",
+            borderRightWidth: "0px",
+            opacity: turn === "black" ? 1 : 0.5
+          }}
+        >
+        </div>
         <Typography
           variant="h6"
           className="black-player"
           style={{
             background: customStyles.blackPlayerColor,
-            color: turn === "black" ? blackTime - timePassed <= 30 ? "red" : "lightgreen" : blackTime <= 30 ? "red" : customStyles.blackPlayerNameColor,
+            color: (turn === "black" && blackTime - timePassed <= 30) || blackTime <= 30 ? "red" : customStyles.blackPlayerNameColor,
             fontSize: "0.8rem",
             padding: "2px 8px", // Reduced vertical padding
             maxWidth: "45%",
