@@ -72,8 +72,8 @@ function EvalBar({
   // adjusts the time passed after the last move
   useEffect(() => {
     clearInterval(intervalRef.current);
-    setTimePassed(0);
     if (turn !== "" && !result) {
+      setTimePassed(0);
       intervalRef.current = setInterval(() => {
         setTimePassed(prevValue => prevValue+1);
       },1000);
