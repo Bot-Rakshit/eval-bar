@@ -252,9 +252,10 @@ function App() {
             blackPlayer,
             error: null,
             lastFEN: "",
-            whitetime: 0,
+            whiteTime: 0,
             blackTime: 0,
             turn: "",
+            moveNumber: 0,
           },
         ]);
         updateEvaluationsForLink({ whitePlayer, blackPlayer });
@@ -366,6 +367,9 @@ function App() {
         turn = "black";
       }
 
+      // move number of player for the current turn
+      const moveNumber = Math.floor(clocks.length/2)+1;
+
       let gameResult = null;
       const resultMatch = cleanedPgn.match(/(1-0|0-1|1\/2-1\/2)$/);
       if (resultMatch) {
@@ -390,6 +394,7 @@ function App() {
             whiteTime,
             blackTime,
             turn,
+            moveNumber,
           };
         }
       } catch (error) {
@@ -631,6 +636,7 @@ function App() {
                 whiteTime={link.whiteTime}
                 blackTime={link.blackTime}
                 turn={link.turn}
+                moveNumber={link.moveNumber}
               />
             ))}
           </Box>
