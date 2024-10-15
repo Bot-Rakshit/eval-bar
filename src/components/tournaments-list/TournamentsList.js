@@ -178,21 +178,11 @@ const TournamentsList = ({ onSelect }) => {
 
   const onSelectTournament = () => {
     if (tournamentId) {
-      const selectedTournament = tournaments.find(t => t.tour.id === tournamentId);
-      if (selectedTournament) {
-        const ongoingRound = selectedTournament.rounds.find(round => round.ongoing === true) || selectedTournament.rounds[0];
-        if (ongoingRound) {
-          onSelect({
-            tournamentId: tournamentId,
-            roundId: ongoingRound.id,
-            gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
-          });
-        } else {
-          console.error("No round found for the selected tournament");
-        }
-      } else {
-        console.error("Selected tournament not found");
-      }
+      onSelect({
+        tournamentId: tournamentId,
+        roundId: tournamentId, // For custom URLs, use the extracted ID as both tournamentId and roundId
+        gameIDs: [] // We don't have game IDs for custom URLs, so leave this empty
+      });
     } else {
       console.error("No tournament ID selected");
     }

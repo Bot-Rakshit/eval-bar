@@ -154,11 +154,8 @@ function App() {
     if (selectedTournament && selectedTournament.roundId) {
       setBroadcastIDs([selectedTournament.roundId]);
       
-      const initialLinks = selectedTournament.gameIDs.map(gameID => {
-        const [whitePlayer, blackPlayer] = gameID.split("-vs-");
-        return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null };
-      });
-      setLinks(initialLinks);
+      // For custom URLs, we don't have initial game IDs, so we'll start with an empty array
+      setLinks([]);
 
       startStreaming(selectedTournament.roundId);
     } else {
