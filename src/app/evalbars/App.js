@@ -328,7 +328,10 @@ function App() {
 
       // get timers of each move
       let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
-      clocks = clocks.map(clock => {return clock.split(" ")[1].split("]")[0]});
+      let clocksList = [];
+      if (clocks) {
+        clocksList = clocks.map(clock => {return clock.split(" ")[1].split("]")[0]});
+      }
 
       // get time control of the game
       let time = 0;
@@ -352,23 +355,23 @@ function App() {
       let whiteTime = time;
       let blackTime = time;
       let turn = "";
-      if (clocks.length >= 2) {
-        if (clocks.length%2) {
-          whiteTime = convertClockToSeconds(clocks[clocks.length-1]);
-          blackTime = convertClockToSeconds(clocks[clocks.length-2]);
+      if (clocksList.length >= 2) {
+        if (clocksList.length%2) {
+          whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+          blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
           turn = "black";
         }else {
-          blackTime = convertClockToSeconds(clocks[clocks.length-1]);
-          whiteTime = convertClockToSeconds(clocks[clocks.length-2]);
+          blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+          whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
           turn = "white";
         }
-      }else if (clocks.length == 1) {
-        whiteTime = convertClockToSeconds(clocks[clocks.length-1]);
+      }else if (clocksList.length == 1) {
+        whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
         turn = "black";
       }
 
       // move number of player for the current turn
-      const moveNumber = Math.floor(clocks.length/2)+1;
+      const moveNumber = Math.floor(clocksList.length/2)+1;
 
       let gameResult = null;
       const resultMatch = cleanedPgn.match(/(1-0|0-1|1\/2-1\/2)$/);
