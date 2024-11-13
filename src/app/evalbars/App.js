@@ -534,7 +534,7 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <Container
-        maxWidth="md"
+        maxWidth="xl"
         className={isChromaBackground ? "chroma-background" : "dark-background"}
       >
         {!isBroadcastMode && (
@@ -607,8 +607,8 @@ function App() {
         )}
 
         <Box
-          mt={5}
-          px={4}
+          mt={7}
+          px={5}
           className="eval-bars-container"
           style={{ width: "100%" }}
         >
