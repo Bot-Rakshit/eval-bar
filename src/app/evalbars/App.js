@@ -119,7 +119,7 @@ function App() {
   };
 
   const fetchEvaluation = async (fen) => {
-    const endpoint = `https://stockfish.chessfolio.fun/analyze_stockfish`;
+    const endpoint = `https://stockfish.bmsamay.com/analyze_stockfish`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
