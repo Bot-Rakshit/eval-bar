@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Chess } from "chess.js";
+import { Chess960 } from 'chess960.js'; // Import the Chess960 class
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
@@ -379,58 +380,14 @@ function App() {
         else if (result === "1/2-1/2") gameResult = "Draw";
       }
 
-      const chess = new Chess();
+      // Use Chess960 instead of Chess
+      const chess = new Chess960();
+
       try {
-        // Get PGN headers *before* using them
-        chess.loadPgn(cleanedPgn); // Load the PGN *first* to get headers.
-        const pgnHeaders = chess.header(); // Now get the headers.
+        // No need for special Chess960 checks or FEN handling.
+        // chess960.js handles it automatically.
 
-        // Check for Chess960 variant
-        const isChess960 = pgnHeaders.some(
-          (header) => header.name === "Variant" && header.value === "Chess960"
-        );
-
-        let startingFEN = null;
-        const fenHeader = pgnHeaders.find((header) => header.name === "FEN");
-        if (fenHeader) {
-          startingFEN = fenHeader.value;
-        }
-
-        if (isChess960) {
-          if (startingFEN) {
-            chess.load(startingFEN); // Load the initial FEN if provided
-          } else {
-            // If no FEN tag, set up a Chess960 game.
-            chess.header("SetUp", "1");
-            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // Standard initial position
-          }
-        }
-
-        chess.clear(); // Clear the board after getting headers
-
-        // --- Main Move Processing (Robust for Chess960) ---
-        const moves = cleanedPgn.split(/\s+/).filter(move => !move.match(/^\d+\./) && move !== '...'); // Extract moves, remove move numbers and "..."
-        
-        for (const sanMove of moves) {
-            try {
-                // 1. Try the move with SAN first (works for most moves)
-                chess.move(sanMove, { sloppy: true });
-            } catch (error) {
-                // 2. If SAN fails (e.g., Chess960 castling), use from/to
-                const legalMoves = chess.moves({ verbose: true });
-                const matchingMove = legalMoves.find(move => move.san === sanMove);
-
-                if (matchingMove) {
-                    // 3. Apply the move using from/to
-                    chess.move({ from: matchingMove.from, to: matchingMove.to });
-                } else {
-                    // 4. Handle unexpected errors (shouldn't happen normally)
-                    console.error("Invalid move even with from/to:", sanMove, "in position", chess.fen());
-                    throw error; // Re-throw to be caught by outer try/catch
-                }
-            }
-        }
-
+        chess.loadPgn(cleanedPgn); // Load the PGN directly
         const currentFEN = chess.fen();
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
