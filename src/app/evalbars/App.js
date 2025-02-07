@@ -381,6 +381,27 @@ function App() {
 
       const chess = new Chess();
       try {
+        // Check for Chess960 variant
+        const isChess960 = pgnHeaders.some(
+          (header) => header.name === "Variant" && header.value === "Chess960"
+        );
+
+        let startingFEN = null;
+        const fenHeader = pgnHeaders.find((header) => header.name === "FEN");
+        if (fenHeader) {
+          startingFEN = fenHeader.value;
+        }
+
+        if (isChess960) {
+          if (startingFEN) {
+            chess.load(startingFEN); // Load the initial FEN if provided
+          } else {
+            // If no FEN tag, set up a Chess960 game.  This is important!
+            chess.header("SetUp", "1");
+            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); //Standard initial position
+          }
+        }
+
         chess.loadPgn(cleanedPgn, { sloppy: true });
         const currentFEN = chess.fen();
 
