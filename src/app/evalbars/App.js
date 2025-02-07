@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { load_fen } from "../../app/evalbars/oldchess.js";
+import { Chess } from 'chessops/chess';
+import { parseFen } from 'chessops/fen';
+import { parsePgn } from 'chessops/pgn';
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
@@ -63,20 +65,6 @@ const GameCard = ({ game, onClick, isSelected }) => {
   );
 };
 
-// Modify the TEST_PGN constant to be in a cleaner format
-const TEST_PGN = `[Event "Freestyle Chess Grand Slam Tour Round Robin"]
-[Site "Weissenhaus, Germany"]
-[Date "2025.02.07"]
-[Round "3.2"]
-[White "Aronian, Levon"]
-[Black "Gukesh D"]
-[Result "1/2-1/2"]
-[SetUp "1"]
-[FEN "rkbqrnnb/pppppppp/8/8/8/8/PPPPPPPP/RKBQRNNB w KQkq - 0 1"]
-[Variant "Chess960"]
-
-1. e4 e5 2. g3 d6 3. d3 g6 4. a4 a5 5. Ne2 Bd7 6. f4 Ne6 7. Ne3 Ne7 8. fxe5 dxe5 9. Rf1 Rf8 10. Nd5 f5 1/2-1/2`;
-
 function App() {
   const [broadcastIDs, setBroadcastIDs] = useState([]);
   const [isBroadcastLoaded, setIsBroadcastLoaded] = useState(false);
@@ -110,7 +98,6 @@ function App() {
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
   const blunderCooldown = 10000; // 10 seconds cooldown between blunders
 
-  const [testMoveNumber, setTestMoveNumber] = useState(5); // Add this state
 
   const handleBlunder = (linkIndex) => {
     const currentTime = Date.now();
@@ -291,72 +278,71 @@ function App() {
     });
 
     if (specificGamePgn) {
-      // Extract headers
-      const headers = {};
-      const headerRegex = /\[(.*?) "(.*?)"\]/g;
-      let match;
-      while ((match = headerRegex.exec(specificGamePgn)) !== null) {
-        headers[match[1]] = match[2];
-      }
-
-      // Initialize board with load_fen using the FEN from the PGN
-      let fen = headers["FEN"];
-      if (!fen) {
-        console.error("FEN not found in PGN");
-        return link;
-      }
-      let board = load_fen(fen);
-
-      // Extract moves from the PGN (handling variations and comments)
-      const moveText = specificGamePgn.split("\n\n")[1];
-
-      // Remove comments and variations
-      const cleanMoveText = moveText
-        .replace(/\{[^}]*\}/g, "")  // Remove comments
-        .replace(/\([^)]*\)/g, ""); // Remove variations
-
-      const moves = cleanMoveText
-        .replace(/\d+\./g, '')        // Remove move numbers
-        .replace(/1-0|0-1|1\/2-1\/2/, '')  // Remove game result
-        .trim()
-        .split(/\s+/)
-        .filter(move => move !== ''); // Remove empty strings
-
-      // Apply moves, checking for legality
-      for (let move of moves) {
-        move = board.c960_castling_converter(move);
-        let reason = board.illegal(move);
-        if (reason) {
-          console.error(`Illegal move ${move}: ${reason}`);
-          //  Handle illegal move (e.g., stop processing, show error)
-          break; // Stop applying moves
+      try {
+        // Extract headers
+        const headers = {};
+        const headerRegex = /\[(.*?) "(.*?)"\]/g;
+        let match;
+        while ((match = headerRegex.exec(specificGamePgn)) !== null) {
+          headers[match[1]] = match[2];
         }
-        board = board.move(move);
-      }
 
-      const currentFEN = board.fen();
-      console.log('Generated FEN:', currentFEN);
+        // Parse initial FEN using chessops
+        const fen = headers["FEN"] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+        const setup = parseFen(fen).unwrap();
+        let pos = Chess.fromSetup(setup).unwrap();
 
-      let gameResult = null;
-      const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
-      if (resultMatch) {
-        gameResult = resultMatch[1];
-        if (gameResult === "1/2-1/2") gameResult = "Draw";
-      }
+        // Parse PGN and apply moves
+        const moveText = specificGamePgn.split('\n\n')[1];
+        const cleanMoveText = moveText
+          .replace(/\{[^}]*\}/g, "")  // Remove comments
+          .replace(/\([^)]*\)/g, "")  // Remove variations
+          .replace(/\d+\./g, '')      // Remove move numbers
+          .replace(/1-0|0-1|1\/2-1\/2/, '')  // Remove result
+          .trim();
 
-      if (currentFEN !== link.lastFEN || gameResult !== link.result) {
-        console.log('Sending FEN for evaluation:', currentFEN);
-        const evalData = await fetchEvaluation(currentFEN);
-        return {
-          ...link,
-          evaluation: evalData.evaluation,
-          lastFEN: currentFEN,
-          result: gameResult,
-          whiteTime: 0,
-          blackTime: 0,
-          turn: board.active === 1 ? 'white' : 'black',
-          moveNumber: board.fullmove,
-        };
+        const moves = cleanMoveText.split(/\s+/).filter(move => move !== '');
+
+        // Apply moves
+        for (const moveStr of moves) {
+          try {
+            // Parse and make move
+            const move = pos.parseSan(moveStr);
+            if (move) {
+              pos = pos.play(move);
+            }
+          } catch (error) {
+            console.error(`Error applying move ${moveStr}:`, error);
+            break;
+          }
+        }
+
+        const currentFEN = pos.fen();
+        console.log('Generated FEN:', currentFEN);
+
+        let gameResult = null;
+        const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
+        if (resultMatch) {
+          gameResult = resultMatch[1];
+          if (gameResult === "1/2-1/2") gameResult = "Draw";
+        }
+
+        if (currentFEN !== link.lastFEN || gameResult !== link.result) {
+          console.log('Sending FEN for evaluation:', currentFEN);
+          const evalData = await fetchEvaluation(currentFEN);
+          return {
+            ...link,
+            evaluation: evalData.evaluation,
+            lastFEN: currentFEN,
+            result: gameResult,
+            whiteTime: 0,
+            blackTime: 0,
+            turn: pos.turn === 'white' ? 'white' : 'black',
+            moveNumber: Math.floor(pos.fullmoves),
+          };
+        }
+      } catch (error) {
+        console.error("Error processing game:", error);
       }
     }
 
@@ -491,65 +477,6 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Modify handleTestChess960 to use oldchess.js methods
-  const handleTestChess960 = async () => {
-    try {
-      // Load initial position from FEN
-      const fenMatch = TEST_PGN.match(/\[FEN "([^"]+)"\]/);
-      if (!fenMatch) {
-        console.error("FEN not found in TEST_PGN");
-        return;
-      }
-      let board = load_fen(fenMatch[1]);
-
-      // Extract moves from PGN (simplified approach)
-      const moveText = TEST_PGN.split('\n\n')[1]; // Get the moves part
-
-      const cleanMoveText = moveText
-        .replace(/\{[^}]*\}/g, "")  // Remove comments
-        .replace(/\([^)]*\)/g, ""); // Remove variations
-
-      const moves = cleanMoveText
-        .replace(/\d+\./g, '') // Remove move numbers
-        .replace(/1\/2-1\/2$/, '')  // Remove result
-        .trim()
-        .split(/\s+/);
-
-      // Apply moves up to the test move number
-      for (let i = 0; i < Math.min(testMoveNumber * 2, moves.length); i++) {
-        let move = moves[i];
-        move = board.c960_castling_converter(move);
-        if (board.illegal(move)) {
-          console.error("Failed to apply move:", move);
-          return;
-        }
-        board = board.move(move);
-      }
-
-      // Get FEN and evaluate
-      const currentFEN = board.fen();
-      console.log('Test FEN:', currentFEN);
-
-      const evalData = await fetchEvaluation(currentFEN);
-
-      // Add a test link
-      setLinks(prevLinks => [...prevLinks, {
-        evaluation: evalData.evaluation,
-        whitePlayer: "Test White",
-        blackPlayer: "Test Black",
-        lastFEN: currentFEN,
-        result: null,
-        whiteTime: 0,
-        blackTime: 0,
-        turn: board.active === 1 ? 'white' : 'black',
-        moveNumber: board.fullmove,
-      }]);
-
-    } catch (error) {
-      console.error("Error testing Chess960:", error);
-    }
-  };
-
   return (
     <ThemeProvider theme={theme}>
       <Container
@@ -569,31 +496,6 @@ function App() {
                 />
               </Box>
             </Toolbar>
-
-            {/* Add the test controls here, outside the isBroadcastLoaded check */}
-            <Box mt={2} display="flex" alignItems="center" gap={2} justifyContent="center">
-              <input
-                type="number"
-                value={testMoveNumber}
-                onChange={(e) => setTestMoveNumber(parseInt(e.target.value))}
-                style={{
-                  width: "60px",
-                  padding: "8px",
-                  marginRight: "10px",
-                  backgroundColor: "#2f3542",
-                  color: "white",
-                  border: "1px solid #666",
-                  borderRadius: "4px"
-                }}
-              />
-              <Button
-                variant="contained"
-                color="secondary"
-                onClick={handleTestChess960}
-              >
-                Test Chess960 PGN
-              </Button>
-            </Box>
 
             {isBroadcastLoaded ? (
               <Box
