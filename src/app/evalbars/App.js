@@ -3,7 +3,8 @@ import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Chess } from 'chessops/chess';
 import { parseFen } from 'chessops/fen';
-import { parsePgn } from 'chessops/pgn';
+import { parsePgn, makePgn, PgnParser } from 'chessops/pgn';
+import { makeSan } from 'chessops/san';
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
@@ -279,53 +280,60 @@ function App() {
 
     if (specificGamePgn) {
       try {
-        // Extract headers
-        const headers = {};
-        const headerRegex = /\[(.*?) "(.*?)"\]/g;
-        let match;
-        while ((match = headerRegex.exec(specificGamePgn)) !== null) {
-          headers[match[1]] = match[2];
+        // Use chessops PGN parser
+        const parser = new PgnParser();
+        const parsed = parser.parse(specificGamePgn);
+        
+        if (!parsed.isOk) {
+          console.error("Failed to parse PGN:", parsed.err);
+          return link;
         }
 
-        // Parse initial FEN using chessops
-        const fen = headers["FEN"] || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
-        const setup = parseFen(fen).unwrap();
-        let pos = Chess.fromSetup(setup).unwrap();
+        const game = parsed.unwrap();
+        
+        // Get the initial position - either from FEN or default starting position
+        let setup;
+        if (game.headers.get('FEN')) {
+          const fenResult = parseFen(game.headers.get('FEN'));
+          if (!fenResult.isOk) {
+            console.error("Invalid FEN in PGN");
+            return link;
+          }
+          setup = fenResult.unwrap();
+        } else {
+          // Use default starting position
+          setup = parseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1').unwrap();
+        }
 
-        // Parse PGN and apply moves
-        const moveText = specificGamePgn.split('\n\n')[1];
-        const cleanMoveText = moveText
-          .replace(/\{[^}]*\}/g, "")  // Remove comments
-          .replace(/\([^)]*\)/g, "")  // Remove variations
-          .replace(/\d+\./g, '')      // Remove move numbers
-          .replace(/1-0|0-1|1\/2-1\/2/, '')  // Remove result
-          .trim();
+        // Create chess position from setup
+        const posResult = Chess.fromSetup(setup);
+        if (!posResult.isOk) {
+          console.error("Invalid chess position");
+          return link;
+        }
+        let pos = posResult.unwrap();
 
-        const moves = cleanMoveText.split(/\s+/).filter(move => move !== '');
-
-        // Apply moves
-        for (const moveStr of moves) {
+        // Apply all moves from the PGN
+        for (const node of game.moves) {
           try {
-            // Parse and make move
-            const move = pos.parseSan(moveStr);
-            if (move) {
-              pos = pos.play(move);
+            if (node.data.san) {
+              const move = pos.parseSan(node.data.san);
+              if (move) {
+                pos = pos.play(move);
+              }
             }
           } catch (error) {
-            console.error(`Error applying move ${moveStr}:`, error);
+            console.error(`Error applying move ${node.data.san}:`, error);
             break;
           }
         }
 
-        const currentFEN = pos.fen();
+        const currentFEN = makePgn({ headers: game.headers, moves: game.moves });
         console.log('Generated FEN:', currentFEN);
 
-        let gameResult = null;
-        const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
-        if (resultMatch) {
-          gameResult = resultMatch[1];
-          if (gameResult === "1/2-1/2") gameResult = "Draw";
-        }
+        // Get game result from PGN headers
+        let gameResult = game.headers.get('Result');
+        if (gameResult === "1/2-1/2") gameResult = "Draw";
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
           console.log('Sending FEN for evaluation:', currentFEN);
