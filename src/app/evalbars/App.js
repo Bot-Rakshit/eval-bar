@@ -405,8 +405,32 @@ function App() {
             chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // Standard initial position
           }
         }
-        chess.clear(); //clear the board before loading the PGN again
-        chess.loadPgn(cleanedPgn, { sloppy: true });
+
+        chess.clear(); // Clear the board after getting headers
+
+        // --- Main Move Processing (Robust for Chess960) ---
+        const moves = cleanedPgn.split(/\s+/).filter(move => !move.match(/^\d+\./) && move !== '...'); // Extract moves, remove move numbers and "..."
+        
+        for (const sanMove of moves) {
+            try {
+                // 1. Try the move with SAN first (works for most moves)
+                chess.move(sanMove, { sloppy: true });
+            } catch (error) {
+                // 2. If SAN fails (e.g., Chess960 castling), use from/to
+                const legalMoves = chess.moves({ verbose: true });
+                const matchingMove = legalMoves.find(move => move.san === sanMove);
+
+                if (matchingMove) {
+                    // 3. Apply the move using from/to
+                    chess.move({ from: matchingMove.from, to: matchingMove.to });
+                } else {
+                    // 4. Handle unexpected errors (shouldn't happen normally)
+                    console.error("Invalid move even with from/to:", sanMove, "in position", chess.fen());
+                    throw error; // Re-throw to be caught by outer try/catch
+                }
+            }
+        }
+
         const currentFEN = chess.fen();
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
