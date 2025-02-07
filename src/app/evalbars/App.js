@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Chess } from "chess.js";
-import { Chess960 } from 'chess960.js'; // Import the Chess960 class
+import { Chess as Chess960 } from 'chess960.js'; // Import the Chess960 class
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
@@ -384,10 +384,35 @@ function App() {
       const chess = new Chess960();
 
       try {
-        // No need for special Chess960 checks or FEN handling.
-        // chess960.js handles it automatically.
+        // 1. Load PGN to get headers (using chess.js temporarily)
+        const tempChess = new Chess();
+        tempChess.loadPgn(cleanedPgn);
+        const pgnHeaders = tempChess.header();
 
-        chess.loadPgn(cleanedPgn); // Load the PGN directly
+        // 2. Check for Chess960 variant
+        const isChess960 = pgnHeaders.some(
+          (header) => header.name === "Variant" && header.value === "Chess960"
+        );
+
+        // 3. Choose the correct library based on the variant
+        let chess;
+        if (isChess960) {
+          chess = new Chess960();
+          //For chess960, we might need to set up the initial position
+          const fenHeader = pgnHeaders.find((header) => header.name === "FEN");
+          if (fenHeader) {
+            chess.load(fenHeader.value);
+          } else {
+            chess.header("SetUp", "1");
+            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+          }
+        } else {
+          chess = new Chess();
+        }
+
+        // 4. Load the PGN into the chosen library
+        chess.loadPgn(cleanedPgn, { sloppy: !isChess960 }); // Use sloppy only for chess.js
+
         const currentFEN = chess.fen();
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
