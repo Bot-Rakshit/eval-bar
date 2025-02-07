@@ -265,223 +265,128 @@ function App() {
   const updateEvaluationsForLink = async (link) => {
     const games = allGames.current.split("\n\n\n");
     const specificGamePgn = games.reverse().find((game) => {
-      const whiteNameMatch = game.match(/\[White "(.*?)"\]/);
-      const blackNameMatch = game.match(/\[Black "(.*?)"\]/);
-      return (
-        whiteNameMatch &&
-        blackNameMatch &&
-        `${whiteNameMatch[1]} - ${blackNameMatch[1]}` ===
-          `${link.whitePlayer} - ${link.blackPlayer}`
-      );
+        const whiteNameMatch = game.match(/\[White "(.*?)"\]/);
+        const blackNameMatch = game.match(/\[Black "(.*?)"\]/);
+        return (
+            whiteNameMatch &&
+            blackNameMatch &&
+            `${whiteNameMatch[1]} - ${blackNameMatch[1]}` ===
+            `${link.whitePlayer} - ${link.blackPlayer}`
+        );
     });
 
     if (specificGamePgn) {
-      const cleanedPgn = specificGamePgn
-        .split("\n")
-        .filter((line) => !line.startsWith("[") && !line.includes("[Event"))
-        .join(" ")
-        .replace(/ {.*?}/g, "")
-        .trim();
-      const formatName = (name) => {
-        // Remove commas and other unwanted characters
-        const cleanedName = name.replace(/[,.;]/g, "").trim();
-        const parts = cleanedName.split(" ").filter((part) => part.length > 0); // Filter empty parts
-
-        // Special cases:
-        if (parts.includes("Praggnanandhaa")) {
-          return "Pragg";
-        }
-        if (parts.includes("Praggnanandhaa,")) {
-          return "Pragg";
-        }
-        if (parts.includes("Nepomniachtchi,")) {
-          return "Nepo";
-        }
-        if (parts.includes("Nepomniachtchi")) {
-          return "Nepo";
-        }
-        if (parts.includes("Warmerdam")) {
-          return "Max";
-        }
-        if (parts.includes("Goryachkina,")) {
-          return "Gorya";
-        }
-        if (parts.includes("Goryachkina")) {
-          return "Gorya";
-        }
-        if (parts.includes("Gukesh")) {
-          return "Gukesh";
+        // Extract headers directly from PGN text
+        const headers = {};
+        const headerRegex = /\[(.*?) "(.*?)"\]/g;
+        let match;
+        while ((match = headerRegex.exec(specificGamePgn)) !== null) {
+            headers[match[1]] = match[2];
         }
 
-        // Find the shortest name
-        let shortestName = parts[0] || ""; // Initialize with empty string
-        for (let i = 1; i < parts.length; i++) {
-          if (parts[i].length < shortestName.length) {
-            shortestName = parts[i];
-          }
+        // Get starting FEN if present
+        const startingFEN = headers['FEN'] || 
+                           'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+        // Initialize chess instance
+        const chess = new Chess960();
+        chess.load(startingFEN);
+
+        // Clean PGN and extract moves
+        const cleanedPgn = specificGamePgn
+            .split("\n")
+            .filter((line) => !line.startsWith("[") && !line.includes("[Event"))
+            .join(" ")
+            .replace(/ {.*?}/g, "")
+            .trim();
+
+        // Get game result
+        let gameResult = null;
+        const resultMatch = cleanedPgn.match(/(1-0|0-1|1\/2-1\/2)$/);
+        if (resultMatch) {
+            const result = resultMatch[1];
+            if (result === "1-0") gameResult = "1-0";
+            else if (result === "0-1") gameResult = "0-1";
+            else if (result === "1/2-1/2") gameResult = "Draw";
         }
 
-        return shortestName;
-      };
-
-      // get timers of each move
-      let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
-      let clocksList = [];
-      if (clocks) {
-        clocksList = clocks.map(clock => {return clock.split(" ")[1].split("]")[0]});
-      }
-
-      // get time control of the game
-      let time = 0;
-      if (specificGamePgn.match(/\[TimeControl "(.*?)"\]/)) {        
-        const timeControl = specificGamePgn.match(/\[TimeControl "(.*?)"\]/)[1];
-        time = timeControl.split(":")[0].split("+")[0];
-        if (time.includes("/")) {
-          time = Number(time.split("/")[1]);
-        }
-      }
-
-      const convertClockToSeconds = (clock) => {
-        const time = clock.split(":");
-        const hours = Number(time[0]);
-        const minutes = Number(time[1]);
-        const seconds = Number(time[2]);
-        return (hours*3600) + (minutes*60) + seconds
-      }
-
-      // modify timers of each player
-      let whiteTime = time;
-      let blackTime = time;
-      let turn = "";
-      if (clocksList.length >= 2) {
-        if (clocksList.length%2) {
-          whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
-          blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
-          turn = "black";
-        }else {
-          blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
-          whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
-          turn = "white";
-        }
-      }else if (clocksList.length == 1) {
-        whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
-        turn = "black";
-      }
-
-      // move number of player for the current turn
-      const moveNumber = Math.floor(clocksList.length/2)+1;
-
-      let gameResult = null;
-      const resultMatch = cleanedPgn.match(/(1-0|0-1|1\/2-1\/2)$/);
-      if (resultMatch) {
-        const result = resultMatch[1];
-        if (result === "1-0") gameResult = "1-0";
-        else if (result === "0-1") gameResult = "0-1";
-        else if (result === "1/2-1/2") gameResult = "Draw";
-      }
-
-      try {
-        // 1. Load PGN to get headers (using chess.js temporarily)
-        const tempChess = new Chess();
-        const moves = cleanedPgn.split(/\s+/).filter(move => !move.match(/^\d+\./) && move !== '...');
-        let headerExtractionError = false; // Track if we had an error during header extraction
-        let headerExtractionMoves = []; // Store the moves applied during header extraction
-
-        for (const sanMove of moves) {
-            try{
-                tempChess.move(sanMove, {sloppy: true});
-                headerExtractionMoves.push(sanMove); // Add the move to the list
-            } catch (error) {
-                const legalMoves = tempChess.moves({ verbose: true });
-                const matchingMove = legalMoves.find(move => move.san === sanMove);
-                if (matchingMove) {
-                    tempChess.move({ from: matchingMove.from, to: matchingMove.to });
-                    headerExtractionMoves.push(sanMove); // Add the move to the list
-                } else {
-                    console.warn("Invalid move in temp chess, stopping header extraction:", sanMove, "in position", tempChess.fen());
-                    headerExtractionError = true; // Set the flag
-                    break; // Stop applying moves to tempChess
-                }
+        // Get time control and clocks
+        let time = 0;
+        if (specificGamePgn.match(/\[TimeControl "(.*?)"\]/)) {        
+            const timeControl = specificGamePgn.match(/\[TimeControl "(.*?)"\]/)[1];
+            time = timeControl.split(":")[0].split("+")[0];
+            if (time.includes("/")) {
+                time = Number(time.split("/")[1]);
             }
         }
 
-        const pgnHeadersObject = tempChess.header();
-
-        console.log("Cleaned PGN:", cleanedPgn); // Log the cleaned PGN
-
-        // Convert the headers object to an array of objects
-        const pgnHeaders = Object.entries(pgnHeadersObject).map(([name, value]) => ({
-          name,
-          value,
-        }));
-
-        // 2. Check for Chess960 variant
-        const isChess960 = pgnHeaders.some(
-          (header) => header.name === "Variant" && header.value === "Chess960"
-        );
-        const isFischerRandom = pgnHeaders.some(
-            (header) => header.name === "Variant" && header.value === "Fischer Random"
-        )
-
-        // 3. Choose the correct library based on the variant
-        let chess;
-        if (isChess960 || isFischerRandom) {
-          chess = new Chess960();
-          //For chess960, we might need to set up the initial position
-          const fenHeader = pgnHeaders.find((header) => header.name === "FEN");
-          if (fenHeader) {
-            chess.load(fenHeader.value); // Load initial FEN if present
-          } else {
-            chess.header("SetUp", "1");
-            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // Set standard FEN if not
-          }
-        } else {
-          chess = new Chess();
+        // Extract clock times
+        let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
+        let clocksList = [];
+        if (clocks) {
+            clocksList = clocks.map(clock => clock.split(" ")[1].split("]")[0]);
         }
 
-        // 4. Apply moves one by one (Robust Move Handling)
-        // Use the moves from header extraction
-        for (const sanMove of headerExtractionMoves) {
-            try {
-                // Try SAN first (with sloppy if using chess.js)
-                chess.move(sanMove, { sloppy: !isChess960 && !isFischerRandom });
-            } catch (error) {
-                // If SAN fails, try from/to (especially useful for castling)
-                const legalMoves = chess.moves({ verbose: true });
-                const matchingMove = legalMoves.find(move => move.san === sanMove);
+        const convertClockToSeconds = (clock) => {
+            const time = clock.split(":");
+            const hours = Number(time[0]);
+            const minutes = Number(time[1]);
+            const seconds = Number(time[2]);
+            return (hours*3600) + (minutes*60) + seconds;
+        };
 
-                if (matchingMove) {
-                    chess.move({ from: matchingMove.from, to: matchingMove.to });
-                } else {
-                    // We should *not* get here, because we're using the same move list
-                    // as the header extraction, which already handled invalid moves.
-                    console.error("Unexpected invalid move:", sanMove, "in position", chess.fen());
-                    throw error; // Re-throw for outer catch
-                }
+        // Set player times and turn
+        let whiteTime = time;
+        let blackTime = time;
+        let turn = "";
+        if (clocksList.length >= 2) {
+            if (clocksList.length % 2) {
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                turn = "black";
+            } else {
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                turn = "white";
+            }
+        } else if (clocksList.length == 1) {
+            whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+            turn = "black";
+        }
+
+        // Calculate move number
+        const moveNumber = Math.floor(clocksList.length/2) + 1;
+
+        // Extract and apply moves
+        const moves = cleanedPgn.split(/\s+/).filter(move => !move.match(/^\d+\./) && move !== '...');
+
+        // Apply moves
+        for (const sanMove of moves) {
+            try {
+                chess.move(sanMove);
+            } catch (error) {
+                console.warn("Invalid move:", sanMove, "in position", chess.fen());
+                break;
             }
         }
 
         const currentFEN = chess.fen();
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
-          const evalData = await fetchEvaluation(currentFEN);
-          return {
-            ...link,
-            evaluation: evalData.evaluation,
-            lastFEN: currentFEN,
-            result: gameResult,
-            whiteTime,
-            blackTime,
-            turn,
-            moveNumber,
-          };
+            const evalData = await fetchEvaluation(currentFEN);
+            return {
+                ...link,
+                evaluation: evalData.evaluation,
+                lastFEN: currentFEN,
+                result: gameResult,
+                whiteTime,
+                blackTime,
+                turn,
+                moveNumber,
+            };
         }
-      } catch (error) {
-        console.error("Error loading PGN:", error);
-      }
     }
 
-    // If no update was made, return the original link
     return link;
   };
 
