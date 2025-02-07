@@ -381,7 +381,7 @@ function App() {
 
       const chess = new Chess();
       try {
-        chess.loadPgn(cleanedPgn);
+        chess.loadPgn(cleanedPgn, { sloppy: true });
         const currentFEN = chess.fen();
 
         if (currentFEN !== link.lastFEN || gameResult !== link.result) {
