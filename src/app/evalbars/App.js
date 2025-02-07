@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { Chess } from "chess.js";
-import { Chess as Chess960 } from 'chess960.js'; // Import the Chess960 class
+import Chess960 from 'chess960.js'; // Import directly, not as a named export
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
@@ -387,7 +387,13 @@ function App() {
         // 1. Load PGN to get headers (using chess.js temporarily)
         const tempChess = new Chess();
         tempChess.loadPgn(cleanedPgn);
-        const pgnHeaders = tempChess.header();
+        const pgnHeadersObject = tempChess.header(); // Get headers as an object
+
+        // Convert the headers object to an array of objects
+        const pgnHeaders = Object.entries(pgnHeadersObject).map(([name, value]) => ({
+          name,
+          value,
+        }));
 
         // 2. Check for Chess960 variant
         const isChess960 = pgnHeaders.some(
