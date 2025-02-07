@@ -380,14 +380,34 @@ function App() {
         else if (result === "1/2-1/2") gameResult = "Draw";
       }
 
-      // Use Chess960 instead of Chess
-      const chess = new Chess960();
-
       try {
         // 1. Load PGN to get headers (using chess.js temporarily)
         const tempChess = new Chess();
-        tempChess.loadPgn(cleanedPgn);
-        const pgnHeadersObject = tempChess.header(); // Get headers as an object
+        const moves = cleanedPgn.split(/\s+/).filter(move => !move.match(/^\d+\./) && move !== '...');
+        let headerExtractionError = false; // Track if we had an error during header extraction
+        let headerExtractionMoves = []; // Store the moves applied during header extraction
+
+        for (const sanMove of moves) {
+            try{
+                tempChess.move(sanMove, {sloppy: true});
+                headerExtractionMoves.push(sanMove); // Add the move to the list
+            } catch (error) {
+                const legalMoves = tempChess.moves({ verbose: true });
+                const matchingMove = legalMoves.find(move => move.san === sanMove);
+                if (matchingMove) {
+                    tempChess.move({ from: matchingMove.from, to: matchingMove.to });
+                    headerExtractionMoves.push(sanMove); // Add the move to the list
+                } else {
+                    console.warn("Invalid move in temp chess, stopping header extraction:", sanMove, "in position", tempChess.fen());
+                    headerExtractionError = true; // Set the flag
+                    break; // Stop applying moves to tempChess
+                }
+            }
+        }
+
+        const pgnHeadersObject = tempChess.header();
+
+        console.log("Cleaned PGN:", cleanedPgn); // Log the cleaned PGN
 
         // Convert the headers object to an array of objects
         const pgnHeaders = Object.entries(pgnHeadersObject).map(([name, value]) => ({
@@ -399,25 +419,47 @@ function App() {
         const isChess960 = pgnHeaders.some(
           (header) => header.name === "Variant" && header.value === "Chess960"
         );
+        const isFischerRandom = pgnHeaders.some(
+            (header) => header.name === "Variant" && header.value === "Fischer Random"
+        )
 
         // 3. Choose the correct library based on the variant
         let chess;
-        if (isChess960) {
+        if (isChess960 || isFischerRandom) {
           chess = new Chess960();
           //For chess960, we might need to set up the initial position
           const fenHeader = pgnHeaders.find((header) => header.name === "FEN");
           if (fenHeader) {
-            chess.load(fenHeader.value);
+            chess.load(fenHeader.value); // Load initial FEN if present
           } else {
             chess.header("SetUp", "1");
-            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // Set standard FEN if not
           }
         } else {
           chess = new Chess();
         }
 
-        // 4. Load the PGN into the chosen library
-        chess.loadPgn(cleanedPgn, { sloppy: !isChess960 }); // Use sloppy only for chess.js
+        // 4. Apply moves one by one (Robust Move Handling)
+        // Use the moves from header extraction
+        for (const sanMove of headerExtractionMoves) {
+            try {
+                // Try SAN first (with sloppy if using chess.js)
+                chess.move(sanMove, { sloppy: !isChess960 && !isFischerRandom });
+            } catch (error) {
+                // If SAN fails, try from/to (especially useful for castling)
+                const legalMoves = chess.moves({ verbose: true });
+                const matchingMove = legalMoves.find(move => move.san === sanMove);
+
+                if (matchingMove) {
+                    chess.move({ from: matchingMove.from, to: matchingMove.to });
+                } else {
+                    // We should *not* get here, because we're using the same move list
+                    // as the header extraction, which already handled invalid moves.
+                    console.error("Unexpected invalid move:", sanMove, "in position", chess.fen());
+                    throw error; // Re-throw for outer catch
+                }
+            }
+        }
 
         const currentFEN = chess.fen();
 
