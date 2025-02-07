@@ -381,6 +381,10 @@ function App() {
 
       const chess = new Chess();
       try {
+        // Get PGN headers *before* using them
+        chess.loadPgn(cleanedPgn); // Load the PGN *first* to get headers.
+        const pgnHeaders = chess.header(); // Now get the headers.
+
         // Check for Chess960 variant
         const isChess960 = pgnHeaders.some(
           (header) => header.name === "Variant" && header.value === "Chess960"
@@ -396,12 +400,12 @@ function App() {
           if (startingFEN) {
             chess.load(startingFEN); // Load the initial FEN if provided
           } else {
-            // If no FEN tag, set up a Chess960 game.  This is important!
+            // If no FEN tag, set up a Chess960 game.
             chess.header("SetUp", "1");
-            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); //Standard initial position
+            chess.header("FEN", "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // Standard initial position
           }
         }
-
+        chess.clear(); //clear the board before loading the PGN again
         chess.loadPgn(cleanedPgn, { sloppy: true });
         const currentFEN = chess.fen();
 
