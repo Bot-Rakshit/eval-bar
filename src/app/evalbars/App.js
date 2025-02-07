@@ -599,7 +599,7 @@ function App() {
                   style={{ marginTop: "10px", marginRight: "10px" }}
                   onClick={addSelectedGames}
                 >
-                  Add Selected Games Bar
+                  Add Selected Games Bars
                 </Button>
                 <Button
                   variant="contained"
