@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Toolbar, Button, Container, Box } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { Chess } from 'chessops/chess';
-import { parseFen } from 'chessops/fen';
-import { parsePgn, makePgn, PgnParser } from 'chessops/pgn';
-import { makeSan } from 'chessops/san';
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
+import { makeFen } from 'chessops/fen';
+import { PgnParser, startingPosition, walk } from 'chessops/pgn';
+import { parseSan } from 'chessops/san';
 
 const theme = createTheme({
   palette: {
@@ -98,7 +97,6 @@ function App() {
   const [isGameDataLoaded, setIsGameDataLoaded] = useState(false);
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
   const blunderCooldown = 10000; // 10 seconds cooldown between blunders
-
 
   const handleBlunder = (linkIndex) => {
     const currentTime = Date.now();
@@ -265,6 +263,14 @@ function App() {
     setSelectedGames([]);
   };
 
+  const convertClockToSeconds = (clock) => {
+    const time = clock.split(":");
+    const hours = Number(time[0]);
+    const minutes = Number(time[1]);
+    const seconds = Number(time[2]);
+    return (hours * 3600) + (minutes * 60) + seconds;
+  };
+
   const updateEvaluationsForLink = async (link) => {
     const games = allGames.current.split("\n\n\n");
     const specificGamePgn = games.reverse().find((game) => {
@@ -274,86 +280,89 @@ function App() {
         whiteNameMatch &&
         blackNameMatch &&
         `${whiteNameMatch[1]} - ${blackNameMatch[1]}` ===
-        `${link.whitePlayer} - ${link.blackPlayer}`
+          `${link.whitePlayer} - ${link.blackPlayer}`
       );
     });
 
     if (specificGamePgn) {
+      let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
+      let clocksList = clocks ? clocks.map(clock => clock.split(" ")[1].split("]")[0]) : [];
+      
+      let gameResult = null;
+      const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
+      if (resultMatch) {
+        gameResult = resultMatch[1] === "1/2-1/2" ? "Draw" : resultMatch[1];
+      }
+
       try {
-        // Use chessops PGN parser
-        const parser = new PgnParser();
-        const parsed = parser.parse(specificGamePgn);
+        let game = null;
+        const parser = new PgnParser((parsedGame) => {
+          game = parsedGame;
+        });
         
-        if (!parsed.isOk) {
-          console.error("Failed to parse PGN:", parsed.err);
-          return link;
-        }
-
-        const game = parsed.unwrap();
+        parser.parse(specificGamePgn);
         
-        // Get the initial position - either from FEN or default starting position
-        let setup;
-        if (game.headers.get('FEN')) {
-          const fenResult = parseFen(game.headers.get('FEN'));
-          if (!fenResult.isOk) {
-            console.error("Invalid FEN in PGN");
-            return link;
-          }
-          setup = fenResult.unwrap();
-        } else {
-          // Use default starting position
-          setup = parseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1').unwrap();
-        }
+        if (game) {
+          let finalPosition = null;
+          let finalFen = null;
 
-        // Create chess position from setup
-        const posResult = Chess.fromSetup(setup);
-        if (!posResult.isOk) {
-          console.error("Invalid chess position");
-          return link;
-        }
-        let pos = posResult.unwrap();
+          startingPosition(game.headers).unwrap(
+            pos => {
+              walk(game.moves, pos, (pos, node) => {
+                const move = parseSan(pos, node.san);
+                if (move) {
+                  pos.play(move);
+                  finalPosition = pos;
+                  return true;
+                }
+                return false;
+              });
+              
+              if (finalPosition) {
+                finalFen = makeFen(finalPosition.toSetup());
+              }
+            },
+            err => {
+              console.error("Error processing position:", err);
+            }
+          );
 
-        // Apply all moves from the PGN
-        for (const node of game.moves) {
-          try {
-            if (node.data.san) {
-              const move = pos.parseSan(node.data.san);
-              if (move) {
-                pos = pos.play(move);
+          if (finalFen && finalFen !== link.lastFEN) {
+            const evalData = await fetchEvaluation(finalFen);
+            
+            let whiteTime = 0, blackTime = 0, turn = "";
+            if (clocksList.length >= 2) {
+              if (clocksList.length % 2) {
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                turn = "black";
+              } else {
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                turn = "white";
               }
             }
-          } catch (error) {
-            console.error(`Error applying move ${node.data.san}:`, error);
-            break;
+
+            const moveNumber = Math.floor(clocksList.length/2) + 1;
+
+            return {
+              ...link,
+              evaluation: evalData.evaluation,
+              lastFEN: finalFen,
+              result: gameResult,
+              whiteTime,
+              blackTime,
+              turn,
+              moveNumber,
+            };
           }
-        }
-
-        const currentFEN = makePgn({ headers: game.headers, moves: game.moves });
-        console.log('Generated FEN:', currentFEN);
-
-        // Get game result from PGN headers
-        let gameResult = game.headers.get('Result');
-        if (gameResult === "1/2-1/2") gameResult = "Draw";
-
-        if (currentFEN !== link.lastFEN || gameResult !== link.result) {
-          console.log('Sending FEN for evaluation:', currentFEN);
-          const evalData = await fetchEvaluation(currentFEN);
-          return {
-            ...link,
-            evaluation: evalData.evaluation,
-            lastFEN: currentFEN,
-            result: gameResult,
-            whiteTime: 0,
-            blackTime: 0,
-            turn: pos.turn === 'white' ? 'white' : 'black',
-            moveNumber: Math.floor(pos.fullmoves),
-          };
         }
       } catch (error) {
         console.error("Error processing game:", error);
       }
     }
 
+    // If no update was made, return the original link
     return link;
   };
 
@@ -504,7 +513,6 @@ function App() {
                 />
               </Box>
             </Toolbar>
-
             {isBroadcastLoaded ? (
               <Box
                 mt={4}
@@ -530,7 +538,7 @@ function App() {
                   style={{ marginTop: "10px", marginRight: "10px" }}
                   onClick={addSelectedGames}
                 >
-                  Add Selected Games Bars
+                  Add Selected Games Bar
                 </Button>
                 <Button
                   variant="contained"
