@@ -4,9 +4,9 @@ import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
 import { useParams, useNavigate } from "react-router-dom";
-import { makeFen } from "chessops/fen";
-import { PgnParser, startingPosition, walk } from "chessops/pgn";
-import { parseSan } from "chessops/san";
+import { makeFen } from 'chessops/fen';
+import { PgnParser, startingPosition, walk } from 'chessops/pgn';
+import { parseSan } from 'chessops/san';
 
 const theme = createTheme({
   palette: {
@@ -120,36 +120,28 @@ function App() {
     }
   };
 
-  const fetchEvaluation = async (fen, depth = 18) => {
-    const endpoint = "https://chess-api.com/v1";
-    const requestData = {
-      fen: fen,
-      depth: 18, // Set your desired depth here, up to a maximum of 18
-    };
+  const fetchEvaluation = async (fen) => {
+    const endpoint = `https://stockfish.linkchess.com/evaluate`;
 
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fen }),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text(); // Attempt to get more error info
-        console.error(`API error! status: ${response.status}`, errorText);
-        return {
-          evaluation: null,
-          error: `API error! status: ${response.status}`,
-        };
-      }
-      const data = await response.json();
-      return data; // Assuming the API returns an object like { evaluation: ... }
-    } catch (error) {
-      console.error("Error fetching evaluation:", error);
-      return { evaluation: null, error: error.message };
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
     }
+
+    const data = await response.json();
+
+    return {
+      evaluation: data.evaluation,
+      bestMove: data.best_move,
+      // Note: This API doesn't provide mate, ponder, or continuation information
+    };
   };
 
   const handleRemoveLink = (index) => {
@@ -160,10 +152,10 @@ function App() {
     console.log("Received Tournament Data:", selectedTournament);
     setIsBroadcastLoaded(true);
     setIsChromaBackground(true);
-
+    
     if (selectedTournament && selectedTournament.roundId) {
       setBroadcastIDs([selectedTournament.roundId]);
-
+      
       // For custom URLs, we don't have initial game IDs, so we'll start with an empty array
       setLinks([]);
 
@@ -207,14 +199,14 @@ function App() {
           fetchAvailableGames();
           setTimeout(processStream, 10);
         } catch (error) {
-          if (error.name !== "AbortError") {
+          if (error.name !== 'AbortError') {
             console.error("Error processing stream:", error);
           }
         }
       };
       processStream();
     } catch (error) {
-      if (error.name !== "AbortError") {
+      if (error.name !== 'AbortError') {
         console.error("Error starting stream:", error);
       }
     }
@@ -276,7 +268,7 @@ function App() {
     const hours = Number(time[0]);
     const minutes = Number(time[1]);
     const seconds = Number(time[2]);
-    return hours * 3600 + minutes * 60 + seconds;
+    return (hours * 3600) + (minutes * 60) + seconds;
   };
 
   const updateEvaluationsForLink = async (link) => {
@@ -294,10 +286,8 @@ function App() {
 
     if (specificGamePgn) {
       let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
-      let clocksList = clocks
-        ? clocks.map((clock) => clock.split(" ")[1].split("]")[0])
-        : [];
-
+      let clocksList = clocks ? clocks.map(clock => clock.split(" ")[1].split("]")[0]) : [];
+      
       let gameResult = null;
       const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
       if (resultMatch) {
@@ -309,15 +299,15 @@ function App() {
         const parser = new PgnParser((parsedGame) => {
           game = parsedGame;
         });
-
+        
         parser.parse(specificGamePgn);
-
+        
         if (game) {
           let finalPosition = null;
           let finalFen = null;
 
           startingPosition(game.headers).unwrap(
-            (pos) => {
+            pos => {
               walk(game.moves, pos, (pos, node) => {
                 const move = parseSan(pos, node.san);
                 if (move) {
@@ -327,43 +317,33 @@ function App() {
                 }
                 return false;
               });
-
+              
               if (finalPosition) {
                 finalFen = makeFen(finalPosition.toSetup());
               }
             },
-            (err) => {
+            err => {
               console.error("Error processing position:", err);
             }
           );
 
           if (finalFen && finalFen !== link.lastFEN) {
             const evalData = await fetchEvaluation(finalFen);
-
-            let whiteTime = 0,
-              blackTime = 0,
-              turn = "";
+            
+            let whiteTime = 0, blackTime = 0, turn = "";
             if (clocksList.length >= 2) {
               if (clocksList.length % 2) {
-                whiteTime = convertClockToSeconds(
-                  clocksList[clocksList.length - 1]
-                );
-                blackTime = convertClockToSeconds(
-                  clocksList[clocksList.length - 2]
-                );
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
                 turn = "black";
               } else {
-                blackTime = convertClockToSeconds(
-                  clocksList[clocksList.length - 1]
-                );
-                whiteTime = convertClockToSeconds(
-                  clocksList[clocksList.length - 2]
-                );
+                blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
                 turn = "white";
               }
             }
 
-            const moveNumber = Math.floor(clocksList.length / 2) + 1;
+            const moveNumber = Math.floor(clocksList.length/2) + 1;
 
             return {
               ...link,
@@ -392,21 +372,12 @@ function App() {
       try {
         const updatedLink = await updateEvaluationsForLink(link);
         if (updatedLink && updatedLink.whitePlayer && updatedLink.blackPlayer) {
-          setLinks((prevLinks) =>
-            prevLinks.map((l) =>
-              l.whitePlayer === updatedLink.whitePlayer &&
-              l.blackPlayer === updatedLink.blackPlayer
-                ? updatedLink
-                : l
-            )
-          );
+          setLinks(prevLinks => prevLinks.map(l => 
+            l.whitePlayer === updatedLink.whitePlayer && l.blackPlayer === updatedLink.blackPlayer ? updatedLink : l
+          ));
 
           // Check for blunder only if game data is loaded and we have a previous evaluation
-          if (
-            isGameDataLoaded &&
-            link.evaluation !== null &&
-            Math.abs(updatedLink.evaluation - link.evaluation) > 2
-          ) {
+          if (isGameDataLoaded && link.evaluation !== null && Math.abs(updatedLink.evaluation - link.evaluation) > 2) {
             handleBlunder(links.indexOf(link));
           }
         }
@@ -420,24 +391,21 @@ function App() {
   const handleGenerateLink = () => {
     const stateData = {
       broadcastIDs: broadcastIDs,
-      gameIDs: links.map(
-        (link) => `${link.whitePlayer}-vs-${link.blackPlayer}`
-      ),
+      gameIDs: links.map(link => `${link.whitePlayer}-vs-${link.blackPlayer}`),
       customStyles,
     };
 
     const serializedData = btoa(JSON.stringify(stateData));
     const uniqueLink = `/broadcast/${serializedData}`;
-
+    
     navigate(uniqueLink);
-
+    
     // Copy to clipboard
-    navigator.clipboard
-      .writeText(`${window.location.origin}${uniqueLink}`)
+    navigator.clipboard.writeText(`${window.location.origin}${uniqueLink}`)
       .then(() => {
         alert("Link copied to clipboard!");
         // Start streaming for each broadcast ID if not already streaming
-        broadcastIDs.forEach((id) => {
+        broadcastIDs.forEach(id => {
           if (!abortControllers.current[id]) {
             startStreaming(id);
           }
@@ -472,20 +440,14 @@ function App() {
         console.log("Decoded state data:", decodedData);
         setBroadcastIDs(decodedData.broadcastIDs);
         setCustomStyles(decodedData.customStyles);
-
+        
         setIsBroadcastLoaded(true);
-
+        
         // Initialize links based on gameIDs
         if (Array.isArray(decodedData.gameIDs)) {
-          const initialLinks = decodedData.gameIDs.map((gameID) => {
+          const initialLinks = decodedData.gameIDs.map(gameID => {
             const [whitePlayer, blackPlayer] = gameID.split("-vs-");
-            return {
-              whitePlayer,
-              blackPlayer,
-              evaluation: null,
-              lastFEN: "",
-              result: null,
-            };
+            return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null };
           });
           setLinks(initialLinks);
           console.log("Initialized links:", initialLinks);
@@ -493,20 +455,15 @@ function App() {
           console.error("gameIDs is not an array:", decodedData.gameIDs);
           setLinks([]);
         }
-
+        
         // Abort any existing streams
-        Object.values(abortControllers.current).forEach((controller) =>
-          controller.abort()
-        );
+        Object.values(abortControllers.current).forEach(controller => controller.abort());
         abortControllers.current = {};
 
         // Start streaming for each broadcast ID
         if (decodedData.broadcastIDs.length > 0) {
-          console.log(
-            "Starting streams for broadcast IDs:",
-            decodedData.broadcastIDs
-          );
-          decodedData.broadcastIDs.forEach((id) => startStreaming(id));
+          console.log("Starting streams for broadcast IDs:", decodedData.broadcastIDs);
+          decodedData.broadcastIDs.forEach(id => startStreaming(id));
         } else {
           console.error("No broadcast IDs found");
         }
@@ -520,15 +477,13 @@ function App() {
         return () => {
           clearInterval(updateInterval);
           // Abort all ongoing fetch requests
-          Object.values(abortControllers.current).forEach((controller) =>
-            controller.abort()
-          );
+          Object.values(abortControllers.current).forEach(controller => controller.abort());
         };
       } catch (error) {
         console.error("Error parsing state from URL", error);
       }
     }
-  }, [stateData]); // Add stateData as a dependency
+  }, [stateData]);  // Add stateData as a dependency
 
   useEffect(() => {
     // Delay the start of blunder checking
@@ -549,11 +504,7 @@ function App() {
           <>
             <Toolbar>
               <Box
-                style={{
-                  display: "flex",
-                  justifyContent: "center",
-                  flexGrow: 1.5,
-                }}
+                style={{ display: "flex", justifyContent: "center", flexGrow: 1.5 }}
               >
                 <img
                   src="https://i.imgur.com/z2fbMtT.png"
