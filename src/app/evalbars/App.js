@@ -120,29 +120,22 @@ function App() {
     }
   };
 
-  const fetchEvaluation = async (fen) => {
-    const endpoint = `https://stockfish.bmsamay.com/analyze_stockfish`;
+    const fetchEvaluation = async (fen, depth = 18) => {
+  const endpoint = "https://chess-api.com/v1";
+  const requestData = {
+    fen: fen,
+    depth: 18, // Set your desired depth here, up to a maximum of 18
+  };
 
+  try {
     const response = await fetch(endpoint, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ fen }),
+      body: JSON.stringify(requestData),
     });
 
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-
-    const data = await response.json();
-
-    return {
-      evaluation: data.evaluation,
-      bestMove: data.best_move,
-      // Note: This API doesn't provide mate, ponder, or continuation information
-    };
-  };
 
   const handleRemoveLink = (index) => {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
