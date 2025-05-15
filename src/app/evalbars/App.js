@@ -123,7 +123,7 @@ function App() {
   const fetchEvaluation = async (fen) => {
   // Encode the FEN string to be safely included in a URL
   const encodedFen = encodeURIComponent(fen);
-  const endpoint = `https://plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
+  const endpoint = `https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
 
   try {
     const response = await fetch(endpoint, {
