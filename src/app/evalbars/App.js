@@ -94,6 +94,7 @@ function App() {
 
   const [isBroadcastMode, setIsBroadcastMode] = useState(false);
   const [currentTournamentId, setCurrentTournamentId] = useState(null); // Added to store tournament ID
+  const [isTransitioningRound, setIsTransitioningRound] = useState(false); // Added for auto-populating games after transition
 
   const [isGameDataLoaded, setIsGameDataLoaded] = useState(false);
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
@@ -581,15 +582,15 @@ function App() {
             allGames.current = ""; // Reset game data
             setLinks([]); // Clear old game links
             setSelectedGames([]); // Clear selected games from previous round
+            setAvailableGames([]); // Clear available games from old round
+
+            setIsTransitioningRound(true); // Signal that a transition is in progress
 
             // Update state to new round
             setBroadcastIDs([nextOngoingRound.id]);
             // `currentTournamentId` remains the same
 
-            // Start streaming for the new round
-            startStreaming(nextOngoingRound.id);
-
-            // Update the URL if navigate function is available and round ID is part of URL structure
+            // Update the URL first
             // This part requires careful handling of stateData structure
             const newUrlState = {
               tournamentId: currentTournamentId,
@@ -600,6 +601,13 @@ function App() {
             const serializedNewState = btoa(JSON.stringify(newUrlState));
             navigate(`/broadcast/${serializedNewState}`, { replace: true });
             // {replace: true} avoids polluting browser history with intermediate round changes.
+
+            // Start streaming for the new round AFTER URL and state are set
+            // Note: The navigation might cause a re-render and effect re-runs.
+            // `startStreaming` should ideally be robust to this or be called from an effect
+            // that specifically handles the new roundId if `stateData` changes.
+            // For now, direct call after navigate. If issues arise, this might need refinement.
+            startStreaming(nextOngoingRound.id);
 
           } else {
             console.log(`No next ongoing round found for tournament ${currentTournamentId}.`);
@@ -619,6 +627,29 @@ function App() {
       };
     }
   }, [isBroadcastMode, currentTournamentId, broadcastIDs, navigate, customStyles]); // Ensure all dependencies are listed
+
+  // useEffect for auto-populating eval bars after a round transition
+  useEffect(() => {
+    if (isTransitioningRound && availableGames.length > 0) {
+      console.log("Auto-populating eval bars for new round with games:", availableGames);
+      const newLinks = availableGames.map(gameString => {
+        const [whitePlayer, blackPlayer] = gameString.split(" - ");
+        return {
+          whitePlayer,
+          blackPlayer,
+          evaluation: null,
+          lastFEN: "",
+          result: null,
+          whiteTime: 0,
+          blackTime: 0,
+          turn: "",
+          moveNumber: 0
+        };
+      });
+      setLinks(newLinks);
+      setIsTransitioningRound(false); // Reset the flag
+    }
+  }, [availableGames, isTransitioningRound, setIsTransitioningRound, setLinks]);
 
 
   useEffect(() => {
