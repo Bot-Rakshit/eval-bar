@@ -93,6 +93,7 @@ function App() {
   const navigate = useNavigate();
 
   const [isBroadcastMode, setIsBroadcastMode] = useState(false);
+  const [currentTournamentId, setCurrentTournamentId] = useState(null); // Added to store tournament ID
 
   const [isGameDataLoaded, setIsGameDataLoaded] = useState(false);
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
@@ -173,15 +174,21 @@ function App() {
     setIsBroadcastLoaded(true);
     setIsChromaBackground(true);
     
-    if (selectedTournament && selectedTournament.roundId) {
-      setBroadcastIDs([selectedTournament.roundId]);
+    if (selectedTournament && selectedTournament.roundId && selectedTournament.tournamentId) {
+      setCurrentTournamentId(selectedTournament.tournamentId); // Store tournamentId
+      setBroadcastIDs([selectedTournament.roundId]); // This will become the currentRoundId
       
       // For custom URLs, we don't have initial game IDs, so we'll start with an empty array
       setLinks([]);
 
+      // Stop any existing streams before starting a new one
+      Object.values(abortControllers.current).forEach(controller => controller.abort());
+      abortControllers.current = {};
+      allGames.current = ""; // Reset game data
+
       startStreaming(selectedTournament.roundId);
     } else {
-      console.error("No valid tournament or round selected");
+      console.error("No valid tournament, round, or tournamentId selected", selectedTournament);
     }
   };
 
@@ -409,13 +416,18 @@ function App() {
   };
 
   const handleGenerateLink = () => {
-    const stateData = {
-      broadcastIDs: broadcastIDs,
+    if (!currentTournamentId || broadcastIDs.length === 0) {
+      alert("Cannot generate link: Tournament ID or Round ID is missing.");
+      return;
+    }
+    const stateToSerialize = {
+      tournamentId: currentTournamentId, // Add tournamentId
+      roundId: broadcastIDs[0], // Assuming broadcastIDs[0] is the current roundId
       gameIDs: links.map(link => `${link.whitePlayer}-vs-${link.blackPlayer}`),
       customStyles,
     };
 
-    const serializedData = btoa(JSON.stringify(stateData));
+    const serializedData = btoa(JSON.stringify(stateToSerialize));
     const uniqueLink = `/broadcast/${serializedData}`;
     
     navigate(uniqueLink);
@@ -457,53 +469,157 @@ function App() {
       setIsBroadcastMode(true);
       try {
         const decodedData = JSON.parse(atob(stateData));
-        console.log("Decoded state data:", decodedData);
-        setBroadcastIDs(decodedData.broadcastIDs);
-        setCustomStyles(decodedData.customStyles);
+        console.log("Decoded state data from URL:", decodedData);
+
+        if (!decodedData.tournamentId || !decodedData.roundId) {
+          console.error("Error: tournamentId or roundId missing in URL stateData.", decodedData);
+          // Potentially navigate to an error page or home
+          navigate("/");
+          return;
+        }
+
+        setCurrentTournamentId(decodedData.tournamentId);
+        setBroadcastIDs([decodedData.roundId]); // Storing as an array for consistency, but effectively currentRoundId
+        setCustomStyles(decodedData.customStyles || customStyles); // Fallback to default if not in URL
         
         setIsBroadcastLoaded(true);
+        document.body.classList.add("chroma-background"); // Ensure background is set
         
-        // Initialize links based on gameIDs
         if (Array.isArray(decodedData.gameIDs)) {
           const initialLinks = decodedData.gameIDs.map(gameID => {
             const [whitePlayer, blackPlayer] = gameID.split("-vs-");
-            return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null };
+            return { whitePlayer, blackPlayer, evaluation: null, lastFEN: "", result: null, whiteTime: 0, blackTime: 0, turn: "", moveNumber: 0 };
           });
           setLinks(initialLinks);
-          console.log("Initialized links:", initialLinks);
         } else {
-          console.error("gameIDs is not an array:", decodedData.gameIDs);
           setLinks([]);
         }
         
-        // Abort any existing streams
         Object.values(abortControllers.current).forEach(controller => controller.abort());
         abortControllers.current = {};
+        allGames.current = ""; // Reset game data
 
-        // Start streaming for each broadcast ID
-        if (decodedData.broadcastIDs.length > 0) {
-          console.log("Starting streams for broadcast IDs:", decodedData.broadcastIDs);
-          decodedData.broadcastIDs.forEach(id => startStreaming(id));
-        } else {
-          console.error("No broadcast IDs found");
-        }
+        console.log(`Starting stream from URL data for tournament: ${decodedData.tournamentId}, round: ${decodedData.roundId}`);
+        startStreaming(decodedData.roundId);
 
-        // Set up an interval to periodically update evaluations
-        const updateInterval = setInterval(() => {
-          updateEvaluations();
-        }, 20000); // Check every 5 seconds
+        // The automatic round checking interval will be set up in another useEffect
+        // that depends on `isBroadcastMode`, `currentTournamentId`, and `broadcastIDs[0]` (currentRoundId)
 
-        // Clean up function
-        return () => {
-          clearInterval(updateInterval);
-          // Abort all ongoing fetch requests
-          Object.values(abortControllers.current).forEach(controller => controller.abort());
-        };
       } catch (error) {
-        console.error("Error parsing state from URL", error);
+        console.error("Error parsing state from URL or initializing broadcast mode:", error);
+        navigate("/"); // Navigate to home on error
       }
     }
-  }, [stateData]);  // Add stateData as a dependency
+  }, [stateData, navigate]); // Added navigate to dependency array
+
+  // useEffect for automatic round transition
+  useEffect(() => {
+    if (isBroadcastMode && currentTournamentId && broadcastIDs.length > 0) {
+      const currentRoundId = broadcastIDs[0];
+      console.log(`Broadcast mode active. Monitoring tournament ${currentTournamentId}, round ${currentRoundId}`);
+
+      const checkForNextRound = async () => {
+        console.log(`Checking for next round for tournament: ${currentTournamentId}, current round: ${currentRoundId}`);
+        try {
+          // Fetch the main tournament data which includes all rounds
+          // Note: Lichess API for all broadcasts might be large.
+          // If there's a more direct "get tournament by ID" endpoint that shows round statuses, that'd be better.
+          // Using the general broadcast API and filtering.
+          const res = await fetch(`https://lichess.org/api/broadcast`);
+          if (!res.ok) {
+            console.error("Failed to fetch broadcast data for round check", res.status);
+            return;
+          }
+          const textData = await res.text();
+          const allBroadcasts = textData.trim().split('\n').map(line => JSON.parse(line));
+
+          const tournamentData = allBroadcasts.find(t => t.tour.id === currentTournamentId);
+
+          if (!tournamentData || !tournamentData.rounds) {
+            console.log(`Tournament ${currentTournamentId} not found or has no rounds in API response.`);
+            // Tournament might have ended or data is temporarily unavailable.
+            // Decide on behavior: stop trying, or keep trying? For now, just return.
+            return;
+          }
+
+          const rounds = tournamentData.rounds;
+          const currentRoundInApi = rounds.find(r => r.id === currentRoundId);
+
+          if (currentRoundInApi && currentRoundInApi.ongoing) {
+            // Current round is still ongoing, do nothing.
+            console.log(`Round ${currentRoundId} is still ongoing.`);
+            return;
+          }
+
+          // Current round is NOT ongoing or not found (implies it ended or data changed)
+          console.log(`Round ${currentRoundId} is no longer ongoing (or not found). Searching for next round.`);
+          let nextOngoingRound = null;
+          const currentRoundIndex = rounds.findIndex(r => r.id === currentRoundId);
+
+          // Look for the next round in sequence that is ongoing
+          if (currentRoundIndex !== -1) {
+            for (let i = currentRoundIndex + 1; i < rounds.length; i++) {
+              if (rounds[i].ongoing) {
+                nextOngoingRound = rounds[i];
+                break;
+              }
+            }
+          }
+
+          // If not found sequentially, find any other ongoing round in this tournament
+          if (!nextOngoingRound) {
+            nextOngoingRound = rounds.find(r => r.id !== currentRoundId && r.ongoing);
+          }
+
+          if (nextOngoingRound) {
+            console.log(`Found next ongoing round: ${nextOngoingRound.id} for tournament ${currentTournamentId}. Transitioning.`);
+            // Stop current stream
+            if (abortControllers.current[currentRoundId]) {
+              abortControllers.current[currentRoundId].abort();
+              delete abortControllers.current[currentRoundId];
+            }
+            allGames.current = ""; // Reset game data
+            setLinks([]); // Clear old game links
+            setSelectedGames([]); // Clear selected games from previous round
+
+            // Update state to new round
+            setBroadcastIDs([nextOngoingRound.id]);
+            // `currentTournamentId` remains the same
+
+            // Start streaming for the new round
+            startStreaming(nextOngoingRound.id);
+
+            // Update the URL if navigate function is available and round ID is part of URL structure
+            // This part requires careful handling of stateData structure
+            const newUrlState = {
+              tournamentId: currentTournamentId,
+              roundId: nextOngoingRound.id,
+              gameIDs: [], // Start with no games selected for the new round
+              customStyles: customStyles
+            };
+            const serializedNewState = btoa(JSON.stringify(newUrlState));
+            navigate(`/broadcast/${serializedNewState}`, { replace: true });
+            // {replace: true} avoids polluting browser history with intermediate round changes.
+
+          } else {
+            console.log(`No next ongoing round found for tournament ${currentTournamentId}.`);
+            // Optional: Notify user tournament might have ended or no new round started.
+          }
+        } catch (error) {
+          console.error("Error checking for next round:", error);
+        }
+      };
+
+      const intervalId = setInterval(checkForNextRound, 30000); // Check every 30 seconds
+      checkForNextRound(); // Initial check
+
+      return () => {
+        console.log("Cleaning up round check interval for tournament", currentTournamentId);
+        clearInterval(intervalId);
+      };
+    }
+  }, [isBroadcastMode, currentTournamentId, broadcastIDs, navigate, customStyles]); // Ensure all dependencies are listed
+
 
   useEffect(() => {
     // Delay the start of blunder checking
