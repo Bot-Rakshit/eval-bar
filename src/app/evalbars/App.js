@@ -193,6 +193,13 @@ function App() {
     }
   };
 
+  const returnToHomePage = () => {
+    if (isBroadcastLoaded) {
+      setIsBroadcastLoaded(false);
+      setLinks([]);
+    }
+  }
+
   const startStreaming = async (roundId) => {
     if (!roundId) {
       console.error("No roundId provided for streaming");
@@ -676,7 +683,8 @@ function App() {
                 <img
                   src="https://i.imgur.com/z2fbMtT.png"
                   alt="ChessBase India Logo"
-                  style={{ height: "100px", marginTop: "20px" }}
+                  style={{ height: "100px", marginTop: "20px", cursor: isBroadcastLoaded ? "pointer" : "default" }}
+                  onClick={returnToHomePage}
                 />
               </Box>
             </Toolbar>
