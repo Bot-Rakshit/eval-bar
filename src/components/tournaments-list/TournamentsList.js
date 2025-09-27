@@ -64,7 +64,7 @@ const CardDescription = styled.p`
   font-size: 1em;
   color: #faf9f6;
   margin-bottom: 1rem;
-  height: 4em;
+  height: auto;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
@@ -243,7 +243,7 @@ const TournamentsList = ({ onSelect }) => {
               <CardTitle>{tournament.tour.name}</CardTitle>
               <CardDate>{tournament.tour.date}</CardDate>
             </CardHeader>
-            <CardDescription>{tournament.tour.description}</CardDescription>
+            <CardDescription>{tournament.tour.description ?? "No description available"}</CardDescription>
             <Button
               href={tournament.tour.url}
               target="_blank"
