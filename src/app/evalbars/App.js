@@ -699,38 +699,42 @@ function App() {
                   marginBottom: 2,
                 }}
               >
-                {availableGames.map((game, index) => (
-                  <GameCard
-                    key={index}
-                    game={game}
-                    onClick={() => handleGameSelection(game)}
-                    isSelected={selectedGames.includes(game)}
-                  />
-                ))}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={addSelectedGames}
-                >
-                  Add Selected Games Bar
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={handleDemoBlunder}
-                >
-                  Demo Blunder
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px" }}
-                  onClick={handleGenerateLink}
-                >
-                  Create Unique Link
-                </Button>
+                <Box>
+                  {availableGames.map((game, index) => (
+                    <GameCard
+                      key={index}
+                      game={game}
+                      onClick={() => handleGameSelection(game)}
+                      isSelected={selectedGames.includes(game)}
+                    />
+                  ))}
+                </Box>
+                <Box mb={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: "10px", marginRight: "10px" }}
+                    onClick={addSelectedGames}
+                  >
+                    Add Selected Games Bar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    style={{ marginTop: "10px", marginRight: "10px" }}
+                    onClick={handleDemoBlunder}
+                  >
+                    Demo Blunder
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: "10px" }}
+                    onClick={handleGenerateLink}
+                  >
+                    Create Unique Link
+                  </Button>
+                </Box>
                 <CustomizeEvalBar
                   customStyles={customStyles}
                   setCustomStyles={setCustomStyles}
