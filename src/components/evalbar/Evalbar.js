@@ -133,7 +133,7 @@ function EvalBar({
 
   const formatEvaluation = (evalValue) => {
     if (evalValue < -1000 || evalValue > 1000) {
-      return "Checkmate";
+      return "Winning";
     }
     return evalValue;
   };
