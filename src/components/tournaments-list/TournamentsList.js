@@ -69,8 +69,13 @@ const CardDescription = styled.p`
   text-overflow: ellipsis;
 `;
 
+const ButtonWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
 const Button = styled.a`
-  margin-top: 0.5rem;
+  margin: 0.5rem;
   padding: 0.5rem 1rem;
   background-color: #4caf50;
   color: white;
@@ -244,13 +249,31 @@ const TournamentsList = ({ onSelect }) => {
               <CardDate>{tournament.tour.date}</CardDate>
             </CardHeader>
             <CardDescription>{tournament.tour.description ?? "No description available"}</CardDescription>
-            <Button
-              href={tournament.tour.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Official Website
-            </Button>
+            <ButtonWrapper>
+              <Button
+                onClick={() => {
+                  const ongoingRound = tournament.rounds.find(
+                    (round) => round.ongoing === true
+                  ) || tournament.rounds[0];
+                  if (ongoingRound) {
+                    onSelect({
+                      tournamentId: tournament.tour.id,
+                      roundId: ongoingRound.id,
+                      gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+                    });
+                  }
+                }}
+              >
+                Check Games
+              </Button>
+              <Button
+                href={tournament.tour.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Official Website
+              </Button>
+            </ButtonWrapper>
           </Card>
         ) : null
       )}
