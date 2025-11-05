@@ -120,6 +120,23 @@ const SearchButton = styled.button`
   }
 `;
 
+// Example tournament that's always available (defined outside component to avoid recreation)
+const EXAMPLE_TOURNAMENT = {
+  tour: {
+    id: "example-tournament-001",
+    name: "Example Tournament (For Testing Colors)",
+    date: "Always Available",
+    description: "A demo tournament with 2 example games for testing color customization",
+    url: "#"
+  },
+  rounds: [{
+    id: "example-round-001",
+    name: "Example Round",
+    ongoing: true
+  }],
+  image: null
+};
+
 const TournamentsList = ({ onSelect }) => {
   const [tournaments, setTournaments] = useState([]);
   const [filteredTournaments, setFilteredTournaments] = useState([]);
@@ -143,8 +160,10 @@ const TournamentsList = ({ onSelect }) => {
             tournament.rounds &&
             tournament.rounds.some((round) => round.ongoing === true)
         );
-        setTournaments(ongoingTournaments);
-        setFilteredTournaments(ongoingTournaments);
+        // Always prepend the example tournament
+        const allTournaments = [EXAMPLE_TOURNAMENT, ...ongoingTournaments];
+        setTournaments(allTournaments);
+        setFilteredTournaments(allTournaments);
         if (ongoingTournaments.length === 0) {
           setBroadcasts(false);
         }
@@ -231,11 +250,21 @@ const TournamentsList = ({ onSelect }) => {
                   (round) => round.ongoing === true
                 ) || tournament.rounds[0];
                 if (ongoingRound) {
-                  onSelect({
-                    tournamentId: tournament.tour.id,
-                    roundId: ongoingRound.id,
-                    gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
-                  });
+                  // Check if this is the example tournament
+                  if (tournament.tour.id === "example-tournament-001") {
+                    onSelect({
+                      tournamentId: tournament.tour.id,
+                      roundId: ongoingRound.id,
+                      gameIDs: ["Magnus Carlsen-vs-Hikaru Nakamura", "Fabiano Caruana-vs-Ding Liren"],
+                      isExample: true
+                    });
+                  } else {
+                    onSelect({
+                      tournamentId: tournament.tour.id,
+                      roundId: ongoingRound.id,
+                      gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+                    });
+                  }
                 }
               }}
             />

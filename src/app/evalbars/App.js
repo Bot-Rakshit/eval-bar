@@ -81,6 +81,7 @@ function App() {
     whitePlayerNameColor: "#FFFFFF",
     blackPlayerNameColor: "#E79D29",
     evalContainerBorderColor: "#FFFFFF",
+    moveIndicatorArrowColor: "#FFA500",
   });
 
   const [layout, setLayout] = useState("grid");
@@ -179,15 +180,36 @@ function App() {
       setCurrentTournamentId(selectedTournament.tournamentId); // Store tournamentId
       setBroadcastIDs([selectedTournament.roundId]); // This will become the currentRoundId
       
-      // For custom URLs, we don't have initial game IDs, so we'll start with an empty array
-      setLinks([]);
+      // Check if this is the example tournament
+      if (selectedTournament.isExample && selectedTournament.gameIDs) {
+        // For example tournament, create static eval bars
+        const exampleLinks = selectedTournament.gameIDs.map((gameID) => {
+          const [whitePlayer, blackPlayer] = gameID.split("-vs-");
+          return {
+            whitePlayer,
+            blackPlayer,
+            evaluation: Math.random() * 4 - 2, // Random evaluation between -2 and 2
+            lastFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            result: null,
+            whiteTime: 3600,
+            blackTime: 3600,
+            turn: Math.random() > 0.5 ? "white" : "black",
+            moveNumber: Math.floor(Math.random() * 40) + 1,
+          };
+        });
+        setLinks(exampleLinks);
+        setAvailableGames(selectedTournament.gameIDs.map((gameID) => gameID.replace("-vs-", " - ")));
+      } else {
+        // For real tournaments, start streaming
+        setLinks([]);
 
-      // Stop any existing streams before starting a new one
-      Object.values(abortControllers.current).forEach(controller => controller.abort());
-      abortControllers.current = {};
-      allGames.current = ""; // Reset game data
+        // Stop any existing streams before starting a new one
+        Object.values(abortControllers.current).forEach(controller => controller.abort());
+        abortControllers.current = {};
+        allGames.current = ""; // Reset game data
 
-      startStreaming(selectedTournament.roundId);
+        startStreaming(selectedTournament.roundId);
+      }
     } else {
       console.error("No valid tournament, round, or tournamentId selected", selectedTournament);
     }
@@ -289,6 +311,35 @@ function App() {
       }
     }
     setSelectedGames([]);
+  };
+
+  const addExampleBar = () => {
+    const exampleBars = [
+      {
+        evaluation: 0.5,
+        whitePlayer: "Example Player 1",
+        blackPlayer: "Example Player 2",
+        error: null,
+        lastFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        whiteTime: 3600,
+        blackTime: 3600,
+        turn: "white",
+        moveNumber: 1,
+        result: null,
+      },
+    ];
+
+    exampleBars.forEach((bar) => {
+      if (
+        !links.some(
+          (link) =>
+            link.whitePlayer === bar.whitePlayer &&
+            link.blackPlayer === bar.blackPlayer
+        )
+      ) {
+        setLinks((prevLinks) => [...prevLinks, bar]);
+      }
+    });
   };
 
   const convertClockToSeconds = (clock) => {
@@ -729,9 +780,25 @@ function App() {
                 />
               </Box>
             ) : (
-              <div className="full-width">
-                <TournamentsList onSelect={handleTournamentSelection} />
-              </div>
+              <>
+                <div className="full-width">
+                  <TournamentsList onSelect={handleTournamentSelection} />
+                </div>
+                <Box mt={4} px={3} textAlign="center">
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={addExampleBar}
+                    style={{ marginBottom: "20px" }}
+                  >
+                    Add Example Bar
+                  </Button>
+                  <CustomizeEvalBar
+                    customStyles={customStyles}
+                    setCustomStyles={setCustomStyles}
+                  />
+                </Box>
+              </>
             )}
           </>
         )}

@@ -235,7 +235,7 @@ function EvalBar({
         <div
           style={{
             border: "5px solid transparent",
-            borderRight: "7px solid orange",
+            borderRight: `7px solid ${customStyles.moveIndicatorArrowColor || "#FFA500"}`,
             borderLeftWidth: "0px",
             opacity: turn === "white" ? 1 : 0.5
           }}
@@ -257,7 +257,7 @@ function EvalBar({
         <div
           style={{
             border: "5px solid transparent",
-            borderLeft: "7px solid orange",
+            borderLeft: `7px solid ${customStyles.moveIndicatorArrowColor || "#FFA500"}`,
             borderRightWidth: "0px",
             opacity: turn === "black" ? 1 : 0.5
           }}

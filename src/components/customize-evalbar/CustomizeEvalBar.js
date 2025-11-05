@@ -14,7 +14,8 @@ function CustomizeEvalBar({ customStyles, setCustomStyles }) {
         { value: 'blackPlayerColor', label: 'Black Player Color' },
         { value: 'whitePlayerNameColor', label: 'White Player Name Color' },
         { value: 'blackPlayerNameColor', label: 'Black Player Name Color' },
-        { value: 'evalContainerBorderColor', label: 'Eval Container Border Color' }
+        { value: 'evalContainerBorderColor', label: 'Eval Container Border Color' },
+        { value: 'moveIndicatorArrowColor', label: 'Move Indicator Arrow Color' }
     ];
 
     const handleChangeComplete = (color) => {
