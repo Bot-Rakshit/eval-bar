@@ -206,38 +206,101 @@ function App() {
     abortControllers.current[roundId] = new AbortController();
 
     const streamURL = `https://lichess.org/api/stream/broadcast/round/${roundId}.pgn`;
-    try {
-      const response = await fetch(streamURL, {
-        signal: abortControllers.current[roundId].signal,
-      });
-      console.log("Stream URL:", streamURL);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    const pgnURL = `https://lichess.org/broadcast/-/-/${roundId}.pgn`;
+    
+    document.body.classList.add("chroma-background");
+
+    // Try streaming first, fall back to polling if it fails (OBS browser compatibility)
+    const tryStreaming = async () => {
+      try {
+        const response = await fetch(streamURL, {
+          signal: abortControllers.current[roundId].signal,
+        });
+        console.log("Stream URL:", streamURL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Check if ReadableStream is properly supported (OBS browser may not support it)
+        if (!response.body || !response.body.getReader) {
+          console.log("ReadableStream not supported, falling back to polling");
+          return false;
+        }
+        
+        const reader = response.body.getReader();
+
+        const processStream = async () => {
+          try {
+            const { done, value } = await reader.read();
+            if (done) return;
+
+            const newData = new TextDecoder().decode(value);
+            allGames.current += newData;
+            await updateEvaluations();
+            fetchAvailableGames();
+            setTimeout(processStream, 10);
+          } catch (error) {
+            if (error.name !== 'AbortError') {
+              console.error("Error processing stream:", error);
+              // If stream fails mid-way, switch to polling
+              startPolling();
+            }
+          }
+        };
+        processStream();
+        return true;
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error("Streaming failed, falling back to polling:", error);
+        }
+        return false;
       }
-      const reader = response.body.getReader();
-      document.body.classList.add("chroma-background");
+    };
 
-      const processStream = async () => {
+    // Polling fallback for OBS browser compatibility
+    const startPolling = () => {
+      console.log("Starting polling mode for OBS compatibility");
+      
+      const pollData = async () => {
+        if (abortControllers.current[roundId]?.signal?.aborted) {
+          return;
+        }
+        
         try {
-          const { done, value } = await reader.read();
-          if (done) return;
-
-          const newData = new TextDecoder().decode(value);
-          allGames.current += newData;
-          await updateEvaluations();
-          fetchAvailableGames();
-          setTimeout(processStream, 10);
+          const response = await fetch(pgnURL, {
+            signal: abortControllers.current[roundId].signal,
+            cache: 'no-store',
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const pgnData = await response.text();
+          if (pgnData && pgnData !== allGames.current) {
+            allGames.current = pgnData;
+            await updateEvaluations();
+            fetchAvailableGames();
+          }
         } catch (error) {
           if (error.name !== 'AbortError') {
-            console.error("Error processing stream:", error);
+            console.error("Polling error:", error);
           }
         }
+        
+        // Poll every 3 seconds
+        if (!abortControllers.current[roundId]?.signal?.aborted) {
+          setTimeout(pollData, 3000);
+        }
       };
-      processStream();
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error("Error starting stream:", error);
-      }
+      
+      pollData();
+    };
+
+    // Try streaming first, if it fails use polling
+    const streamingWorked = await tryStreaming();
+    if (!streamingWorked) {
+      startPolling();
     }
   };
 
@@ -552,19 +615,20 @@ function App() {
       const checkForNextRound = async () => {
         console.log(`Checking for next round for tournament: ${currentTournamentId}, current round: ${currentRoundId}`);
         try {
-          // Fetch the main tournament data which includes all rounds
-          // Note: Lichess API for all broadcasts might be large.
-          // If there's a more direct "get tournament by ID" endpoint that shows round statuses, that'd be better.
-          // Using the general broadcast API and filtering.
-          const res = await fetch(`https://lichess.org/api/broadcast`);
+          // Use the specific tournament endpoint which is more reliable in OBS browser
+          const res = await fetch(`https://lichess.org/api/broadcast/${currentTournamentId}`, {
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
           if (!res.ok) {
             console.error("Failed to fetch broadcast data for round check", res.status);
             return;
           }
-          const textData = await res.text();
-          const allBroadcasts = textData.trim().split('\n').map(line => JSON.parse(line));
-
-          const tournamentData = allBroadcasts.find(t => t.tour.id === currentTournamentId);
+          const broadcastData = await res.json();
+          
+          // The specific tournament endpoint returns the tournament directly
+          const tournamentData = broadcastData;
 
           if (!tournamentData || !tournamentData.rounds) {
             console.log(`Tournament ${currentTournamentId} not found or has no rounds in API response.`);

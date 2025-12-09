@@ -134,10 +134,18 @@ const TournamentsList = ({ onSelect }) => {
     fetch("https://lichess.org/api/broadcast?nb=50")
       .then((response) => response.text())
       .then((data) => {
-        const jsonData = data
-          .trim()
-          .split("\n")
-          .map((line) => JSON.parse(line));
+        // Robust NDJSON parsing with error handling for OBS browser compatibility
+        const lines = data.trim().split("\n");
+        const jsonData = [];
+        for (const line of lines) {
+          try {
+            if (line.trim()) {
+              jsonData.push(JSON.parse(line));
+            }
+          } catch (e) {
+            console.warn("Failed to parse line:", line, e);
+          }
+        }
         const ongoingTournaments = jsonData.filter(
           (tournament) =>
             tournament.rounds &&
