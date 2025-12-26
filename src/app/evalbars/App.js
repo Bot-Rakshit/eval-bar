@@ -239,43 +239,63 @@ function App() {
             const gameOptions = data.games.map(game => game.name).filter(Boolean);
             setAvailableGames(Array.from(new Set(gameOptions)));
 
-            // Update links with FEN data from the API
-            setLinks(prevLinks => prevLinks.map(link => {
-              const gameKey = `${link.whitePlayer} - ${link.blackPlayer}`;
-              const matchingGame = data.games.find(g => g.name === gameKey);
+            // Update links with FEN data from the API and fetch evaluations
+            setLinks(prevLinks => {
+              const updatedLinks = prevLinks.map(link => {
+                const gameKey = `${link.whitePlayer} - ${link.blackPlayer}`;
+                const matchingGame = data.games.find(g => g.name === gameKey);
 
-              if (matchingGame && matchingGame.fen && matchingGame.fen !== link.lastFEN) {
-                // Get clock times from players array
-                let whiteTime = 0, blackTime = 0;
-                if (matchingGame.players && matchingGame.players.length >= 2) {
-                  whiteTime = matchingGame.players[0].clock ? Math.floor(matchingGame.players[0].clock / 1000) : 0;
-                  blackTime = matchingGame.players[1].clock ? Math.floor(matchingGame.players[1].clock / 1000) : 0;
+                if (matchingGame) {
+                  // Get clock times from players array
+                  let whiteTime = link.whiteTime, blackTime = link.blackTime;
+                  if (matchingGame.players && matchingGame.players.length >= 2) {
+                    whiteTime = matchingGame.players[0].clock ? Math.floor(matchingGame.players[0].clock / 1000) : 0;
+                    blackTime = matchingGame.players[1].clock ? Math.floor(matchingGame.players[1].clock / 1000) : 0;
+                  }
+
+                  // Determine whose turn it is from FEN
+                  const fenParts = matchingGame.fen ? matchingGame.fen.split(' ') : [];
+                  const turn = fenParts[1] === 'w' ? 'white' : 'black';
+
+                  // Parse result - ALWAYS update result from API, don't overwrite with null
+                  let result = link.result; // Keep existing result by default
+                  if (matchingGame.status && matchingGame.status !== '*') {
+                    result = matchingGame.status === '½-½' ? 'Draw' : matchingGame.status;
+                  }
+
+                  const newFen = matchingGame.fen || link.lastFEN;
+                  const fenChanged = newFen && newFen !== link.lastFEN;
+
+                  return {
+                    ...link,
+                    lastFEN: newFen,
+                    whiteTime,
+                    blackTime,
+                    turn,
+                    result,
+                    _needsEval: fenChanged && !result, // Flag to fetch eval only if no result and FEN changed
+                  };
                 }
+                return link;
+              });
 
-                // Determine whose turn it is from FEN
-                const fenParts = matchingGame.fen.split(' ');
-                const turn = fenParts[1] === 'w' ? 'white' : 'black';
-
-                // Parse result
-                let result = null;
-                if (matchingGame.status && matchingGame.status !== '*') {
-                  result = matchingGame.status === '½-½' ? 'Draw' : matchingGame.status;
+              // Fetch evaluations for games that need it (async, will update state later)
+              updatedLinks.forEach(async (link, index) => {
+                if (link._needsEval && link.lastFEN) {
+                  try {
+                    const evalData = await fetchEvaluation(link.lastFEN);
+                    setLinks(prev => prev.map((l, i) =>
+                      i === index ? { ...l, evaluation: evalData.evaluation, _needsEval: false } : l
+                    ));
+                  } catch (error) {
+                    console.error("Error fetching evaluation:", error);
+                  }
                 }
+              });
 
-                return {
-                  ...link,
-                  lastFEN: matchingGame.fen,
-                  whiteTime,
-                  blackTime,
-                  turn,
-                  result,
-                };
-              }
-              return link;
-            }));
-
-            // Trigger evaluation updates for links with new FENs
-            updateEvaluations();
+              // Return links without the _needsEval flag in state
+              return updatedLinks.map(({ _needsEval, ...rest }) => rest);
+            });
           }
         } catch (error) {
           if (error.name !== 'AbortError') {
