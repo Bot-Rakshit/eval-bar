@@ -124,49 +124,49 @@ function App() {
   };
 
   const fetchEvaluation = async (fen) => {
-  // Encode the FEN string to be safely included in a URL
-  const encodedFen = encodeURIComponent(fen);
-  const endpoint = `https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
+    // Encode the FEN string to be safely included in a URL
+    const encodedFen = encodeURIComponent(fen);
+    const endpoint = `https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
 
-  try {
-    const response = await fetch(endpoint, {
-      method: 'GET', // Changed to GET as the new API uses URL parameters
-      headers: {
-        // 'Content-Type': 'application/json', // Not strictly necessary for a GET request without a body
-        // You might need other headers depending on the API requirements, like an API key.
-      },
-      // body: JSON.stringify({ fen }), // Removed as FEN is now in the URL
-    });
+    try {
+      const response = await fetch(endpoint, {
+        method: 'GET', // Changed to GET as the new API uses URL parameters
+        headers: {
+          // 'Content-Type': 'application/json', // Not strictly necessary for a GET request without a body
+          // You might need other headers depending on the API requirements, like an API key.
+        },
+        // body: JSON.stringify({ fen }), // Removed as FEN is now in the URL
+      });
 
-    if (!response.ok) {
-      // Attempt to get more error information from the response if available
-      let errorMessage = `Network response was not ok (status: ${response.status})`;
-      try {
-        const errorData = await response.json();
-        errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
-      } catch (e) {
-        // If response is not JSON or another error occurs
-        errorMessage += ` - ${response.statusText}`;
+      if (!response.ok) {
+        // Attempt to get more error information from the response if available
+        let errorMessage = `Network response was not ok (status: ${response.status})`;
+        try {
+          const errorData = await response.json();
+          errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
+        } catch (e) {
+          // If response is not JSON or another error occurs
+          errorMessage += ` - ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
-      throw new Error(errorMessage);
+
+      const data = await response.json();
+
+      // The new API returns an object like {"evaluation": 7.04}
+      // It does not provide 'bestMove'.
+      return {
+        evaluation: data.evaluation,
+        bestMove: null, // Set to null or undefined as the new API doesn't provide it
+        // Note: This API doesn't provide mate, ponder, continuation, or bestMove information
+      };
+    } catch (error) {
+      console.error("Failed to fetch evaluation:", error);
+      // Depending on how you want to handle errors, you might re-throw,
+      // return a default/error object, or handle it directly.
+      throw error; // Re-throwing the error to be caught by the caller
     }
-
-    const data = await response.json();
-
-    // The new API returns an object like {"evaluation": 7.04}
-    // It does not provide 'bestMove'.
-    return {
-      evaluation: data.evaluation,
-      bestMove: null, // Set to null or undefined as the new API doesn't provide it
-      // Note: This API doesn't provide mate, ponder, continuation, or bestMove information
-    };
-  } catch (error) {
-    console.error("Failed to fetch evaluation:", error);
-    // Depending on how you want to handle errors, you might re-throw,
-    // return a default/error object, or handle it directly.
-    throw error; // Re-throwing the error to be caught by the caller
-  }
-};
+  };
   const handleRemoveLink = (index) => {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
   };
@@ -175,11 +175,11 @@ function App() {
     console.log("Received Tournament Data:", selectedTournament);
     setIsBroadcastLoaded(true);
     setIsChromaBackground(true);
-    
+
     if (selectedTournament && selectedTournament.roundId && selectedTournament.tournamentId) {
       setCurrentTournamentId(selectedTournament.tournamentId); // Store tournamentId
       setBroadcastIDs([selectedTournament.roundId]); // This will become the currentRoundId
-      
+
       // For custom URLs, we don't have initial game IDs, so we'll start with an empty array
       setLinks([]);
 
@@ -206,101 +206,135 @@ function App() {
     abortControllers.current[roundId] = new AbortController();
 
     const streamURL = `https://lichess.org/api/stream/broadcast/round/${roundId}.pgn`;
-    const pgnURL = `https://lichess.org/broadcast/-/-/${roundId}.pgn`;
-    
+    const roundApiURL = `https://lichess.org/api/broadcast/-/-/${roundId}`;
+
     document.body.classList.add("chroma-background");
 
-    // Try streaming first, fall back to polling if it fails (OBS browser compatibility)
-    const tryStreaming = async () => {
-      try {
-        const response = await fetch(streamURL, {
-          signal: abortControllers.current[roundId].signal,
-        });
-        console.log("Stream URL:", streamURL);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // Check if ReadableStream is properly supported (OBS browser may not support it)
-        if (!response.body || !response.body.getReader) {
-          console.log("ReadableStream not supported, falling back to polling");
-          return false;
-        }
-        
-        const reader = response.body.getReader();
-
-        const processStream = async () => {
-          try {
-            const { done, value } = await reader.read();
-            if (done) return;
-
-            const newData = new TextDecoder().decode(value);
-            allGames.current += newData;
-            await updateEvaluations();
-            fetchAvailableGames();
-            setTimeout(processStream, 10);
-          } catch (error) {
-            if (error.name !== 'AbortError') {
-              console.error("Error processing stream:", error);
-              // If stream fails mid-way, switch to polling
-              startPolling();
-            }
-          }
-        };
-        processStream();
-        return true;
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error("Streaming failed, falling back to polling:", error);
-        }
-        return false;
-      }
-    };
-
-    // Polling fallback for OBS browser compatibility
+    // Polling fallback using the round API (provides FEN directly)
     const startPolling = () => {
-      console.log("Starting polling mode for OBS compatibility");
-      
+      console.log("Starting polling mode (45 second interval)");
+
       const pollData = async () => {
         if (abortControllers.current[roundId]?.signal?.aborted) {
           return;
         }
-        
+
         try {
-          const response = await fetch(pgnURL, {
+          const response = await fetch(roundApiURL, {
             signal: abortControllers.current[roundId].signal,
+            headers: {
+              'Accept': 'application/json'
+            },
             cache: 'no-store',
           });
-          
+
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
-          
-          const pgnData = await response.text();
-          if (pgnData && pgnData !== allGames.current) {
-            allGames.current = pgnData;
-            await updateEvaluations();
-            fetchAvailableGames();
+
+          const data = await response.json();
+
+          if (data.games && Array.isArray(data.games)) {
+            // Update available games from the API response
+            const gameOptions = data.games.map(game => game.name).filter(Boolean);
+            setAvailableGames(Array.from(new Set(gameOptions)));
+
+            // Update links with FEN data from the API
+            setLinks(prevLinks => prevLinks.map(link => {
+              const gameKey = `${link.whitePlayer} - ${link.blackPlayer}`;
+              const matchingGame = data.games.find(g => g.name === gameKey);
+
+              if (matchingGame && matchingGame.fen && matchingGame.fen !== link.lastFEN) {
+                // Get clock times from players array
+                let whiteTime = 0, blackTime = 0;
+                if (matchingGame.players && matchingGame.players.length >= 2) {
+                  whiteTime = matchingGame.players[0].clock ? Math.floor(matchingGame.players[0].clock / 1000) : 0;
+                  blackTime = matchingGame.players[1].clock ? Math.floor(matchingGame.players[1].clock / 1000) : 0;
+                }
+
+                // Determine whose turn it is from FEN
+                const fenParts = matchingGame.fen.split(' ');
+                const turn = fenParts[1] === 'w' ? 'white' : 'black';
+
+                // Parse result
+                let result = null;
+                if (matchingGame.status && matchingGame.status !== '*') {
+                  result = matchingGame.status === '½-½' ? 'Draw' : matchingGame.status;
+                }
+
+                return {
+                  ...link,
+                  lastFEN: matchingGame.fen,
+                  whiteTime,
+                  blackTime,
+                  turn,
+                  result,
+                };
+              }
+              return link;
+            }));
+
+            // Trigger evaluation updates for links with new FENs
+            updateEvaluations();
           }
         } catch (error) {
           if (error.name !== 'AbortError') {
             console.error("Polling error:", error);
           }
         }
-        
-        // Poll every 3 seconds
+
+        // Poll every 45 seconds
         if (!abortControllers.current[roundId]?.signal?.aborted) {
-          setTimeout(pollData, 3000);
+          setTimeout(pollData, 45000);
         }
       };
-      
+
       pollData();
     };
 
-    // Try streaming first, if it fails use polling
-    const streamingWorked = await tryStreaming();
-    if (!streamingWorked) {
-      startPolling();
+    try {
+      const response = await fetch(streamURL, {
+        signal: abortControllers.current[roundId].signal,
+      });
+      console.log("Stream URL:", streamURL);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if ReadableStream is properly supported
+      if (!response.body || !response.body.getReader) {
+        console.log("ReadableStream not supported, falling back to polling");
+        startPolling();
+        return;
+      }
+
+      const reader = response.body.getReader();
+
+      const processStream = async () => {
+        try {
+          const { done, value } = await reader.read();
+          if (done) return;
+
+          const newData = new TextDecoder().decode(value);
+          allGames.current += newData;
+          await updateEvaluations();
+          fetchAvailableGames();
+          setTimeout(processStream, 10);
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error("Error processing stream, switching to polling:", error);
+            startPolling();
+          }
+        }
+      };
+
+      processStream();
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error("Streaming failed, switching to polling:", error);
+        startPolling();
+      }
     }
   };
 
@@ -401,14 +435,14 @@ function App() {
         whiteNameMatch &&
         blackNameMatch &&
         `${whiteNameMatch[1]} - ${blackNameMatch[1]}` ===
-          `${link.whitePlayer} - ${link.blackPlayer}`
+        `${link.whitePlayer} - ${link.blackPlayer}`
       );
     });
 
     if (specificGamePgn) {
       let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
       let clocksList = clocks ? clocks.map(clock => clock.split(" ")[1].split("]")[0]) : [];
-      
+
       let gameResult = null;
       const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
       if (resultMatch) {
@@ -420,9 +454,9 @@ function App() {
         const parser = new PgnParser((parsedGame) => {
           game = parsedGame;
         });
-        
+
         parser.parse(specificGamePgn);
-        
+
         if (game) {
           let finalPosition = null;
           let finalFen = null;
@@ -438,7 +472,7 @@ function App() {
                 }
                 return false;
               });
-              
+
               if (finalPosition) {
                 finalFen = makeFen(finalPosition.toSetup());
               }
@@ -450,21 +484,21 @@ function App() {
 
           if (finalFen && finalFen !== link.lastFEN) {
             const evalData = await fetchEvaluation(finalFen);
-            
+
             let whiteTime = 0, blackTime = 0, turn = "";
             if (clocksList.length >= 2) {
               if (clocksList.length % 2) {
-                whiteTime = convertClockToSeconds(clocksList[clocksList.length-1]);
-                blackTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
+                blackTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
                 turn = "black";
               } else {
-                blackTime = convertClockToSeconds(clocksList[clocksList.length-1]);
-                whiteTime = convertClockToSeconds(clocksList[clocksList.length-2]);
+                blackTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
+                whiteTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
                 turn = "white";
               }
             }
 
-            const moveNumber = Math.floor(clocksList.length/2) + 1;
+            const moveNumber = Math.floor(clocksList.length / 2) + 1;
 
             return {
               ...link,
@@ -493,7 +527,7 @@ function App() {
       try {
         const updatedLink = await updateEvaluationsForLink(link);
         if (updatedLink && updatedLink.whitePlayer && updatedLink.blackPlayer) {
-          setLinks(prevLinks => prevLinks.map(l => 
+          setLinks(prevLinks => prevLinks.map(l =>
             l.whitePlayer === updatedLink.whitePlayer && l.blackPlayer === updatedLink.blackPlayer ? updatedLink : l
           ));
 
@@ -523,9 +557,9 @@ function App() {
 
     const serializedData = btoa(JSON.stringify(stateToSerialize));
     const uniqueLink = `/broadcast/${serializedData}`;
-    
+
     navigate(uniqueLink);
-    
+
     // Copy to clipboard
     navigator.clipboard.writeText(`${window.location.origin}${uniqueLink}`)
       .then(() => {
@@ -575,10 +609,10 @@ function App() {
         setCurrentTournamentId(decodedData.tournamentId);
         setBroadcastIDs([decodedData.roundId]); // Storing as an array for consistency, but effectively currentRoundId
         setCustomStyles(decodedData.customStyles || customStyles); // Fallback to default if not in URL
-        
+
         setIsBroadcastLoaded(true);
         document.body.classList.add("chroma-background"); // Ensure background is set
-        
+
         if (Array.isArray(decodedData.gameIDs)) {
           const initialLinks = decodedData.gameIDs.map(gameID => {
             const [whitePlayer, blackPlayer] = gameID.split("-vs-");
@@ -588,7 +622,7 @@ function App() {
         } else {
           setLinks([]);
         }
-        
+
         Object.values(abortControllers.current).forEach(controller => controller.abort());
         abortControllers.current = {};
         allGames.current = ""; // Reset game data
@@ -626,7 +660,7 @@ function App() {
             return;
           }
           const broadcastData = await res.json();
-          
+
           // The specific tournament endpoint returns the tournament directly
           const tournamentData = broadcastData;
 
