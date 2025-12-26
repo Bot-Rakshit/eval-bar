@@ -101,6 +101,32 @@ function App() {
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
   const blunderCooldown = 10000; // 10 seconds cooldown between blunders
 
+  // Auto-reload when new version is deployed
+  const currentVersion = useRef(null);
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const response = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (response.ok) {
+          const data = await response.json();
+          if (currentVersion.current === null) {
+            currentVersion.current = data.version;
+            console.log('App version:', data.version);
+          } else if (currentVersion.current !== data.version) {
+            console.log('New version detected, reloading...', data.version);
+            window.location.reload(true);
+          }
+        }
+      } catch (error) {
+        console.log('Version check failed:', error);
+      }
+    };
+
+    checkVersion(); // Check immediately on load
+    const interval = setInterval(checkVersion, 60000); // Check every 60 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   const handleBlunder = (linkIndex) => {
     const currentTime = Date.now();
     if (!isGameDataLoaded || currentTime - lastBlunderTime < blunderCooldown) {
