@@ -220,6 +220,13 @@ function App() {
     }
   };
 
+  const returnToHomePage = () => {
+    if (isBroadcastLoaded) {
+      setIsBroadcastLoaded(false);
+      setLinks([]);
+    }
+  }
+
   const startStreaming = async (roundId) => {
     if (!roundId) {
       console.error("No roundId provided for streaming");
@@ -850,7 +857,8 @@ function App() {
                 <img
                   src="https://i.imgur.com/z2fbMtT.png"
                   alt="ChessBase India Logo"
-                  style={{ height: "100px", marginTop: "20px" }}
+                  style={{ height: "100px", marginTop: "20px", cursor: isBroadcastLoaded ? "pointer" : "default" }}
+                  onClick={returnToHomePage}
                 />
               </Box>
             </Toolbar>
@@ -865,38 +873,42 @@ function App() {
                   marginBottom: 2,
                 }}
               >
-                {availableGames.map((game, index) => (
-                  <GameCard
-                    key={index}
-                    game={game}
-                    onClick={() => handleGameSelection(game)}
-                    isSelected={selectedGames.includes(game)}
-                  />
-                ))}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={addSelectedGames}
-                >
-                  Add Selected Games Bar
-                </Button>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={handleDemoBlunder}
-                >
-                  Demo Blunder
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px" }}
-                  onClick={handleGenerateLink}
-                >
-                  Create Unique Link
-                </Button>
+                <Box>
+                  {availableGames.map((game, index) => (
+                    <GameCard
+                      key={index}
+                      game={game}
+                      onClick={() => handleGameSelection(game)}
+                      isSelected={selectedGames.includes(game)}
+                    />
+                  ))}
+                </Box>
+                <Box mb={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: "10px", marginRight: "10px" }}
+                    onClick={addSelectedGames}
+                  >
+                    Add Selected Games Bar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    style={{ marginTop: "10px", marginRight: "10px" }}
+                    onClick={handleDemoBlunder}
+                  >
+                    Demo Blunder
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: "10px" }}
+                    onClick={handleGenerateLink}
+                  >
+                    Create Unique Link
+                  </Button>
+                </Box>
                 <CustomizeEvalBar
                   customStyles={customStyles}
                   setCustomStyles={setCustomStyles}

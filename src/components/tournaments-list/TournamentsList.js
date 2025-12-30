@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import styled from "styled-components";
 
 const TournamentsWrapper = styled.div`
@@ -6,10 +6,6 @@ const TournamentsWrapper = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-`;
-const NoBroadcastsMessage = styled.p`
-  color: #faf9f6; /* White color */
-  font-size: 1.2em; /* Bigger font size */
 `;
 
 const Card = styled.div`
@@ -21,7 +17,6 @@ const Card = styled.div`
   padding: 1rem;
   margin: 1rem 0;
   border-radius: 1rem;
-  cursor: pointer;
   background-color: ${(props) =>
     props.selected ? "rgba(76, 175, 80, 0.3)" : "rgba(1, 1, 4, 0.6)"};
   transition: all 0.3s ease-in-out;
@@ -51,12 +46,14 @@ const CardHeader = styled.div`
 const CardTitle = styled.h2`
   font-size: 1.8em;
   color: #faf9f6;
+  margin-top: 1rem;
   margin-bottom: 1rem;
 `;
 
 const CardDate = styled.p`
   font-size: 1em;
   color: #faf9f6;
+  margin-top: 1rem;
   margin-bottom: 1rem;
 `;
 
@@ -64,13 +61,18 @@ const CardDescription = styled.p`
   font-size: 1em;
   color: #faf9f6;
   margin-bottom: 1rem;
-  height: 4em;
+  height: auto;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
+const ButtonWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+`;
+
 const Button = styled.a`
-  margin-top: 0.5rem;
+  margin: 0.5rem;
   padding: 0.5rem 1rem;
   background-color: #4caf50;
   color: white;
@@ -97,7 +99,7 @@ const Title = styled.h1`
 const SearchWrapper = styled.div`
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 `;
 
 const SearchInput = styled.input`
@@ -124,11 +126,8 @@ const TournamentsList = ({ onSelect }) => {
   const [tournaments, setTournaments] = useState([]);
   const [filteredTournaments, setFilteredTournaments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTournaments, setSelectedTournaments] = useState([]);
-  const [checkedItems, setCheckedItems] = useState({});
   const [customUrl, setCustomUrl] = useState("");
   const [tournamentId, setTournamentId] = useState("");
-  const [broadcasts, setBroadcasts] = useState(true);
 
   useEffect(() => {
     fetch("https://lichess.org/api/broadcast?nb=50")
@@ -153,9 +152,6 @@ const TournamentsList = ({ onSelect }) => {
         );
         setTournaments(ongoingTournaments);
         setFilteredTournaments(ongoingTournaments);
-        if (ongoingTournaments.length === 0) {
-          setBroadcasts(false);
-        }
       })
       .catch((error) =>
         console.error("Error fetching tournaments:", error)
@@ -206,7 +202,9 @@ const TournamentsList = ({ onSelect }) => {
           placeholder="Search tournaments..."
         />
         <SearchButton onClick={handleSearch}>Search</SearchButton>
+      </SearchWrapper>
 
+      <SearchWrapper>
         <SearchInput
           value={customUrl}
           onChange={handleCustomUrlChange}
@@ -218,7 +216,6 @@ const TournamentsList = ({ onSelect }) => {
         tournament.tour && tournament.rounds && tournament.rounds.length > 0 ? (
           <Card
             key={tournament.tour.id}
-            selected={selectedTournaments.includes(tournament.tour.id)}
           >
             {tournament.image && (
               <img
@@ -227,38 +224,36 @@ const TournamentsList = ({ onSelect }) => {
                 alt="Tournament Image"
               />
             )}
-            <input
-              type="checkbox"
-              checked={checkedItems[tournament.tour.id]}
-              onChange={() => {
-                setCheckedItems((prevState) => ({
-                  ...prevState,
-                  [tournament.tour.id]: !prevState[tournament.tour.id],
-                }));
-                const ongoingRound = tournament.rounds.find(
-                  (round) => round.ongoing === true
-                ) || tournament.rounds[0];
-                if (ongoingRound) {
-                  onSelect({
-                    tournamentId: tournament.tour.id,
-                    roundId: ongoingRound.id,
-                    gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
-                  });
-                }
-              }}
-            />
             <CardHeader>
               <CardTitle>{tournament.tour.name}</CardTitle>
               <CardDate>{tournament.tour.date}</CardDate>
             </CardHeader>
-            <CardDescription>{tournament.tour.description}</CardDescription>
-            <Button
-              href={tournament.tour.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Official Website
-            </Button>
+            <CardDescription>{tournament.tour.description ?? "No description available"}</CardDescription>
+            <ButtonWrapper>
+              <Button
+                onClick={() => {
+                  const ongoingRound = tournament.rounds.find(
+                    (round) => round.ongoing === true
+                  ) || tournament.rounds[0];
+                  if (ongoingRound) {
+                    onSelect({
+                      tournamentId: tournament.tour.id,
+                      roundId: ongoingRound.id,
+                      gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+                    });
+                  }
+                }}
+              >
+                Check Games
+              </Button>
+              <Button
+                href={tournament.tour.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Official Website
+              </Button>
+            </ButtonWrapper>
           </Card>
         ) : null
       )}
