@@ -151,105 +151,87 @@ function App() {
 
   // Cache to prevent duplicate API calls (chess-api.com has 1000 calls/IP limit)
   const evalCacheRef = useRef(new Map());
-  const proxyIndexRef = useRef(0);
-  const rateLimitedRef = useRef(false);
+  const useFallbackRef = useRef(false);
 
-  const fetchEvaluation = async (fen, retryCount = 0) => {
+  const fetchFromChessApi = async (fen) => {
+    const response = await fetch('https://chess-api.com/v1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fen, depth: 12, maxThinkingTime: 50 }),
+    });
+
+    if (response.status === 429) {
+      throw new Error('RATE_LIMITED');
+    }
+    if (!response.ok) {
+      throw new Error(`chess-api.com failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      evaluation: data.mate !== null ? (data.mate > 0 ? 100 : -100) : data.eval,
+      bestMove: data.san || data.move || null,
+      mate: data.mate,
+      depth: data.depth,
+      winChance: data.winChance,
+    };
+  };
+
+  const fetchFromFallback = async (fen) => {
+    const encodedFen = encodeURIComponent(fen);
+    const response = await fetch(`https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`);
+
+    if (!response.ok) {
+      throw new Error(`Fallback API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      evaluation: data.evaluation,
+      bestMove: null,
+    };
+  };
+
+  const fetchEvaluation = async (fen) => {
     // Check cache first to avoid duplicate calls
     if (evalCacheRef.current.has(fen)) {
       return evalCacheRef.current.get(fen);
     }
 
-    const endpoint = 'https://chess-api.com/v1';
-
-    // CORS proxies to rotate through when rate limited
-    const corsProxies = [
-      null, // Direct request first
-      'https://corsproxy.io/?',
-      'https://api.allorigins.win/raw?url=',
-      'https://cors-anywhere.herokuapp.com/',
-    ];
-
-    const makeRequest = async (proxyUrl) => {
-      const targetUrl = proxyUrl ? `${proxyUrl}${encodeURIComponent(endpoint)}` : endpoint;
-
-      const response = await fetch(targetUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fen: fen,
-          depth: 12,
-          maxThinkingTime: 50,
-        }),
-      });
-
-      return response;
-    };
+    let result;
 
     try {
-      // Start with current proxy index (remembers if we're rate limited)
-      let response = await makeRequest(corsProxies[proxyIndexRef.current]);
-
-      // Handle rate limiting (429) or other errors - try next proxy
-      if (response.status === 429 || !response.ok) {
-        rateLimitedRef.current = true;
-
-        // Try each proxy until one works
-        for (let i = 1; i < corsProxies.length && !response.ok; i++) {
-          proxyIndexRef.current = i;
-          console.log(`Rate limited, trying proxy ${i}...`);
-
-          // Small delay before retry
-          await new Promise(resolve => setTimeout(resolve, 500 * i));
-
-          try {
-            response = await makeRequest(corsProxies[i]);
-            if (response.ok) break;
-          } catch (e) {
-            console.log(`Proxy ${i} failed:`, e.message);
-          }
-        }
+      // If we've been rate limited before, go straight to fallback
+      if (useFallbackRef.current) {
+        result = await fetchFromFallback(fen);
+      } else {
+        result = await fetchFromChessApi(fen);
       }
-
-      if (!response.ok) {
-        throw new Error(`All endpoints failed (status: ${response.status})`);
-      }
-
-      const data = await response.json();
-
-      // chess-api.com response format:
-      // { eval: number, move: string, san: string, mate: number|null, centipawns: string, ... }
-      const result = {
-        evaluation: data.mate !== null ? (data.mate > 0 ? 100 : -100) : data.eval,
-        bestMove: data.san || data.move || null,
-        mate: data.mate,
-        depth: data.depth,
-        winChance: data.winChance,
-      };
-
-      // Cache the result
-      evalCacheRef.current.set(fen, result);
-
-      // Limit cache size to prevent memory issues (keep last 500 positions)
-      if (evalCacheRef.current.size > 500) {
-        const firstKey = evalCacheRef.current.keys().next().value;
-        evalCacheRef.current.delete(firstKey);
-      }
-
-      return result;
     } catch (error) {
-      console.error("Failed to fetch evaluation:", error);
-
-      // Retry once with exponential backoff
-      if (retryCount < 2) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-        return fetchEvaluation(fen, retryCount + 1);
+      // On rate limit or failure, try fallback API
+      if (error.message === 'RATE_LIMITED') {
+        console.log('Rate limited on chess-api.com, switching to fallback API');
+        useFallbackRef.current = true;
       }
 
-      throw error;
+      try {
+        result = await fetchFromFallback(fen);
+      } catch (fallbackError) {
+        console.error('Both APIs failed:', error.message, fallbackError.message);
+        throw fallbackError;
+      }
     }
+
+    // Cache the result
+    evalCacheRef.current.set(fen, result);
+
+    // Limit cache size to prevent memory issues (keep last 500 positions)
+    if (evalCacheRef.current.size > 500) {
+      const firstKey = evalCacheRef.current.keys().next().value;
+      evalCacheRef.current.delete(firstKey);
+    }
+
+    return result;
   };
   const handleRemoveLink = (index) => {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
