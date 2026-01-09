@@ -149,29 +149,36 @@ function App() {
     }
   };
 
+  // Cache to prevent duplicate API calls (chess-api.com has 1000 calls/IP limit)
+  const evalCacheRef = useRef(new Map());
+
   const fetchEvaluation = async (fen) => {
-    // Encode the FEN string to be safely included in a URL
-    const encodedFen = encodeURIComponent(fen);
-    const endpoint = `https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
+    // Check cache first to avoid duplicate calls
+    if (evalCacheRef.current.has(fen)) {
+      return evalCacheRef.current.get(fen);
+    }
+
+    const endpoint = 'https://chess-api.com/v1';
 
     try {
       const response = await fetch(endpoint, {
-        method: 'GET', // Changed to GET as the new API uses URL parameters
+        method: 'POST',
         headers: {
-          // 'Content-Type': 'application/json', // Not strictly necessary for a GET request without a body
-          // You might need other headers depending on the API requirements, like an API key.
+          'Content-Type': 'application/json',
         },
-        // body: JSON.stringify({ fen }), // Removed as FEN is now in the URL
+        body: JSON.stringify({
+          fen: fen,
+          depth: 12,
+          maxThinkingTime: 50,
+        }),
       });
 
       if (!response.ok) {
-        // Attempt to get more error information from the response if available
         let errorMessage = `Network response was not ok (status: ${response.status})`;
         try {
           const errorData = await response.json();
           errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
         } catch (e) {
-          // If response is not JSON or another error occurs
           errorMessage += ` - ${response.statusText}`;
         }
         throw new Error(errorMessage);
@@ -179,18 +186,29 @@ function App() {
 
       const data = await response.json();
 
-      // The new API returns an object like {"evaluation": 7.04}
-      // It does not provide 'bestMove'.
-      return {
-        evaluation: data.evaluation,
-        bestMove: null, // Set to null or undefined as the new API doesn't provide it
-        // Note: This API doesn't provide mate, ponder, continuation, or bestMove information
+      // chess-api.com response format:
+      // { eval: number, move: string, san: string, mate: number|null, centipawns: string, ... }
+      const result = {
+        evaluation: data.mate !== null ? (data.mate > 0 ? 100 : -100) : data.eval,
+        bestMove: data.san || data.move || null,
+        mate: data.mate,
+        depth: data.depth,
+        winChance: data.winChance,
       };
+
+      // Cache the result
+      evalCacheRef.current.set(fen, result);
+
+      // Limit cache size to prevent memory issues (keep last 500 positions)
+      if (evalCacheRef.current.size > 500) {
+        const firstKey = evalCacheRef.current.keys().next().value;
+        evalCacheRef.current.delete(firstKey);
+      }
+
+      return result;
     } catch (error) {
       console.error("Failed to fetch evaluation:", error);
-      // Depending on how you want to handle errors, you might re-throw,
-      // return a default/error object, or handle it directly.
-      throw error; // Re-throwing the error to be caught by the caller
+      throw error;
     }
   };
   const handleRemoveLink = (index) => {
