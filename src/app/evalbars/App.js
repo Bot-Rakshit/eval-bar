@@ -151,8 +151,10 @@ function App() {
 
   // Cache to prevent duplicate API calls (chess-api.com has 1000 calls/IP limit)
   const evalCacheRef = useRef(new Map());
+  const proxyIndexRef = useRef(0);
+  const rateLimitedRef = useRef(false);
 
-  const fetchEvaluation = async (fen) => {
+  const fetchEvaluation = async (fen, retryCount = 0) => {
     // Check cache first to avoid duplicate calls
     if (evalCacheRef.current.has(fen)) {
       return evalCacheRef.current.get(fen);
@@ -160,8 +162,18 @@ function App() {
 
     const endpoint = 'https://chess-api.com/v1';
 
-    try {
-      const response = await fetch(endpoint, {
+    // CORS proxies to rotate through when rate limited
+    const corsProxies = [
+      null, // Direct request first
+      'https://corsproxy.io/?',
+      'https://api.allorigins.win/raw?url=',
+      'https://cors-anywhere.herokuapp.com/',
+    ];
+
+    const makeRequest = async (proxyUrl) => {
+      const targetUrl = proxyUrl ? `${proxyUrl}${encodeURIComponent(endpoint)}` : endpoint;
+
+      const response = await fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,15 +185,36 @@ function App() {
         }),
       });
 
-      if (!response.ok) {
-        let errorMessage = `Network response was not ok (status: ${response.status})`;
-        try {
-          const errorData = await response.json();
-          errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
-        } catch (e) {
-          errorMessage += ` - ${response.statusText}`;
+      return response;
+    };
+
+    try {
+      // Start with current proxy index (remembers if we're rate limited)
+      let response = await makeRequest(corsProxies[proxyIndexRef.current]);
+
+      // Handle rate limiting (429) or other errors - try next proxy
+      if (response.status === 429 || !response.ok) {
+        rateLimitedRef.current = true;
+
+        // Try each proxy until one works
+        for (let i = 1; i < corsProxies.length && !response.ok; i++) {
+          proxyIndexRef.current = i;
+          console.log(`Rate limited, trying proxy ${i}...`);
+
+          // Small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 500 * i));
+
+          try {
+            response = await makeRequest(corsProxies[i]);
+            if (response.ok) break;
+          } catch (e) {
+            console.log(`Proxy ${i} failed:`, e.message);
+          }
         }
-        throw new Error(errorMessage);
+      }
+
+      if (!response.ok) {
+        throw new Error(`All endpoints failed (status: ${response.status})`);
       }
 
       const data = await response.json();
@@ -208,6 +241,13 @@ function App() {
       return result;
     } catch (error) {
       console.error("Failed to fetch evaluation:", error);
+
+      // Retry once with exponential backoff
+      if (retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return fetchEvaluation(fen, retryCount + 1);
+      }
+
       throw error;
     }
   };
