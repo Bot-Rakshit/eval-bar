@@ -149,48 +149,8 @@ function App() {
     }
   };
 
-  // Cache to prevent duplicate API calls (chess-api.com has 1000 calls/IP limit)
+  // Cache to prevent duplicate API calls
   const evalCacheRef = useRef(new Map());
-  const useFallbackRef = useRef(false);
-
-  const fetchFromChessApi = async (fen) => {
-    const response = await fetch('https://chess-api.com/v1', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fen, depth: 12, maxThinkingTime: 50 }),
-    });
-
-    if (response.status === 429) {
-      throw new Error('RATE_LIMITED');
-    }
-    if (!response.ok) {
-      throw new Error(`chess-api.com failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      evaluation: data.mate !== null ? (data.mate > 0 ? 100 : -100) : data.eval,
-      bestMove: data.san || data.move || null,
-      mate: data.mate,
-      depth: data.depth,
-      winChance: data.winChance,
-    };
-  };
-
-  const fetchFromFallback = async (fen) => {
-    const encodedFen = encodeURIComponent(fen);
-    const response = await fetch(`https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`);
-
-    if (!response.ok) {
-      throw new Error(`Fallback API failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      evaluation: data.evaluation,
-      bestMove: null,
-    };
-  };
 
   const fetchEvaluation = async (fen) => {
     // Check cache first to avoid duplicate calls
@@ -198,40 +158,34 @@ function App() {
       return evalCacheRef.current.get(fen);
     }
 
-    let result;
-
     try {
-      // If we've been rate limited before, go straight to fallback
-      if (useFallbackRef.current) {
-        result = await fetchFromFallback(fen);
-      } else {
-        result = await fetchFromChessApi(fen);
+      const encodedFen = encodeURIComponent(fen);
+      const response = await fetch(`https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`);
+
+      if (!response.ok) {
+        throw new Error(`API failed: ${response.status}`);
       }
+
+      const data = await response.json();
+      const result = {
+        evaluation: data.evaluation,
+        bestMove: null,
+      };
+
+      // Cache the result
+      evalCacheRef.current.set(fen, result);
+
+      // Limit cache size to prevent memory issues (keep last 500 positions)
+      if (evalCacheRef.current.size > 500) {
+        const firstKey = evalCacheRef.current.keys().next().value;
+        evalCacheRef.current.delete(firstKey);
+      }
+
+      return result;
     } catch (error) {
-      // On rate limit or failure, try fallback API
-      if (error.message === 'RATE_LIMITED') {
-        console.log('Rate limited on chess-api.com, switching to fallback API');
-        useFallbackRef.current = true;
-      }
-
-      try {
-        result = await fetchFromFallback(fen);
-      } catch (fallbackError) {
-        console.error('Both APIs failed:', error.message, fallbackError.message);
-        throw fallbackError;
-      }
+      console.error('API failed:', error.message);
+      throw error;
     }
-
-    // Cache the result
-    evalCacheRef.current.set(fen, result);
-
-    // Limit cache size to prevent memory issues (keep last 500 positions)
-    if (evalCacheRef.current.size > 500) {
-      const firstKey = evalCacheRef.current.keys().next().value;
-      evalCacheRef.current.delete(firstKey);
-    }
-
-    return result;
   };
   const handleRemoveLink = (index) => {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
