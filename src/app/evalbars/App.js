@@ -128,6 +128,22 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Initialize Stockfish WASM engine on mount for faster first evaluation
+  useEffect(() => {
+    const engine = getStockfishEngine();
+    engine.init().then((ready) => {
+      if (ready) {
+        console.log('Stockfish WASM engine initialized');
+      } else {
+        console.error('Failed to initialize Stockfish WASM engine');
+      }
+    });
+
+    return () => {
+      // Don't terminate on unmount - engine is shared singleton
+    };
+  }, []);
+
   const handleBlunder = (linkIndex) => {
     const currentTime = Date.now();
     if (!isGameDataLoaded || currentTime - lastBlunderTime < blunderCooldown) {
