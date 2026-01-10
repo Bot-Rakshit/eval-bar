@@ -64,11 +64,14 @@ class StockfishEngine {
               const isBlackToMove = this.currentFen && this.currentFen.split(' ')[1] === 'b';
 
               let evaluation;
+              let mateIn = null;
+
               if (scoreMatMatch) {
-                const mateIn = parseInt(scoreMatMatch[1], 10);
-                // Flip for black's perspective and convert to large number
-                const adjustedMate = isBlackToMove ? -mateIn : mateIn;
-                evaluation = adjustedMate > 0 ? 100 : -100; // Use +/-100 for mate scores
+                const rawMate = parseInt(scoreMatMatch[1], 10);
+                // Flip for black's perspective
+                mateIn = isBlackToMove ? -rawMate : rawMate;
+                // Use large values for sorting/bar display (positive = white winning)
+                evaluation = mateIn > 0 ? 100 : -100;
               } else {
                 const cp = parseInt(scoreCpMatch[1], 10);
                 // Flip score if black to move (stockfish reports from side-to-move perspective)
@@ -79,6 +82,7 @@ class StockfishEngine {
               this.onEvaluation({
                 evaluation,
                 depth,
+                mateIn, // null if not mate, positive = white mates, negative = black mates
                 isFinal: depth >= MAX_DEPTH
               });
             }
@@ -174,7 +178,8 @@ export async function evaluatePosition(fen) {
       if (evalData.isFinal) {
         resolve({
           evaluation: evalData.evaluation,
-          depth: evalData.depth
+          depth: evalData.depth,
+          mateIn: evalData.mateIn
         });
       }
     });
@@ -184,7 +189,8 @@ export async function evaluatePosition(fen) {
       if (latestEval) {
         resolve({
           evaluation: latestEval.evaluation,
-          depth: latestEval.depth
+          depth: latestEval.depth,
+          mateIn: latestEval.mateIn
         });
       } else {
         resolve(null);
@@ -207,7 +213,8 @@ export async function evaluateWithProgress(fen, onProgress) {
       if (onProgress) {
         onProgress({
           evaluation: evalData.evaluation,
-          depth: evalData.depth
+          depth: evalData.depth,
+          mateIn: evalData.mateIn
         });
       }
 
@@ -215,7 +222,8 @@ export async function evaluateWithProgress(fen, onProgress) {
       if (evalData.isFinal) {
         resolve({
           evaluation: evalData.evaluation,
-          depth: evalData.depth
+          depth: evalData.depth,
+          mateIn: evalData.mateIn
         });
       }
     });
@@ -225,7 +233,8 @@ export async function evaluateWithProgress(fen, onProgress) {
       if (latestEval) {
         resolve({
           evaluation: latestEval.evaluation,
-          depth: latestEval.depth
+          depth: latestEval.depth,
+          mateIn: latestEval.mateIn
         });
       } else {
         resolve(null);

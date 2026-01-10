@@ -6,6 +6,7 @@ import blunderSound from "../../assets/blunder-sound.mp3";
 
 function EvalBar({
   evaluation,
+  mateIn,
   whitePlayer,
   blackPlayer,
   result,
@@ -89,7 +90,12 @@ function EvalBar({
     if (result === "1-0") return "100%";
     if (result === "0-1") return "0%";
     if (result === "1/2-1/2") return "50%";
-    
+
+    // Handle mate scores
+    if (mateIn !== null && mateIn !== undefined) {
+      return mateIn > 0 ? "100%" : "0%";
+    }
+
     if (evaluation >= 99) return "100%";
     if (evaluation >= 4) return "90%";
     if (evaluation <= -4) return "10%";

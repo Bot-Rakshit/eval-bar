@@ -175,6 +175,7 @@ function App() {
         return {
           evaluation: result.evaluation,
           depth: result.depth,
+          mateIn: result.mateIn,
           bestMove: null,
         };
       }
@@ -304,12 +305,12 @@ function App() {
                     // Progress callback to update evaluation as depth increases
                     const onProgress = (progressData) => {
                       setLinks(prev => prev.map((l, i) =>
-                        i === index ? { ...l, evaluation: progressData.evaluation, depth: progressData.depth } : l
+                        i === index ? { ...l, evaluation: progressData.evaluation, depth: progressData.depth, mateIn: progressData.mateIn } : l
                       ));
                     };
                     const evalData = await fetchEvaluation(link.lastFEN, onProgress);
                     setLinks(prev => prev.map((l, i) =>
-                      i === index ? { ...l, evaluation: evalData.evaluation, depth: evalData.depth, _needsEval: false } : l
+                      i === index ? { ...l, evaluation: evalData.evaluation, depth: evalData.depth, mateIn: evalData.mateIn, _needsEval: false } : l
                     ));
                   } catch (error) {
                     console.error("Error fetching evaluation:", error);
@@ -940,6 +941,7 @@ function App() {
               <EvalBar
                 key={index}
                 evaluation={link.evaluation}
+                mateIn={link.mateIn}
                 whitePlayer={link.whitePlayer}
                 blackPlayer={link.blackPlayer}
                 result={link.result}
