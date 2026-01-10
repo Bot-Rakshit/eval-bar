@@ -285,9 +285,15 @@ function App() {
               updatedLinks.forEach(async (link, index) => {
                 if (link._needsEval && link.lastFEN) {
                   try {
-                    const evalData = await fetchEvaluation(link.lastFEN);
+                    // Progress callback to update evaluation as depth increases
+                    const onProgress = (progressData) => {
+                      setLinks(prev => prev.map((l, i) =>
+                        i === index ? { ...l, evaluation: progressData.evaluation, depth: progressData.depth } : l
+                      ));
+                    };
+                    const evalData = await fetchEvaluation(link.lastFEN, onProgress);
                     setLinks(prev => prev.map((l, i) =>
-                      i === index ? { ...l, evaluation: evalData.evaluation, _needsEval: false } : l
+                      i === index ? { ...l, evaluation: evalData.evaluation, depth: evalData.depth, _needsEval: false } : l
                     ));
                   } catch (error) {
                     console.error("Error fetching evaluation:", error);
