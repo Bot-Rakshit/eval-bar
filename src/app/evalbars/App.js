@@ -548,6 +548,7 @@ function App() {
             return {
               ...link,
               evaluation: evalData.evaluation,
+              mateIn: evalData.mateIn,
               lastFEN: finalFen,
               result: gameResult,
               whiteTime,

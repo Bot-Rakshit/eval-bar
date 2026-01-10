@@ -138,9 +138,25 @@ function EvalBar({
   };
 
   const formatEvaluation = (evalValue) => {
+    // Handle mate scores
+    if (mateIn !== null && mateIn !== undefined) {
+      if (mateIn === 0) {
+        return "Checkmate";
+      }
+      // Show as "M3" for mate in 3 (white winning) or "M-3" for mate in 3 (black winning)
+      return `M${mateIn > 0 ? '' : ''}${mateIn}`;
+    }
+
     if (evalValue < -1000 || evalValue > 1000) {
       return "Checkmate";
     }
+
+    // Format evaluation to show + for positive values
+    if (typeof evalValue === 'number') {
+      const formatted = evalValue.toFixed(1);
+      return evalValue > 0 ? `+${formatted}` : formatted;
+    }
+
     return evalValue;
   };
 
