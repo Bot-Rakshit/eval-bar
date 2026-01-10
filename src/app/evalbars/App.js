@@ -7,6 +7,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { makeFen } from 'chessops/fen';
 import { PgnParser, startingPosition, walk } from 'chessops/pgn';
 import { parseSan } from 'chessops/san';
+import { evaluateWithProgress, getStockfishEngine } from '../../lib/stockfishEngine';
 
 const theme = createTheme({
   palette: {
@@ -149,48 +150,23 @@ function App() {
     }
   };
 
-  const fetchEvaluation = async (fen) => {
-    // Encode the FEN string to be safely included in a URL
-    const encodedFen = encodeURIComponent(fen);
-    const endpoint = `https://eval.plc.hadron43.in/eval-bars/?fen=${encodedFen}`;
-
+  const fetchEvaluation = async (fen, onProgress = null) => {
+    // Use local WASM Stockfish for evaluation
     try {
-      const response = await fetch(endpoint, {
-        method: 'GET', // Changed to GET as the new API uses URL parameters
-        headers: {
-          // 'Content-Type': 'application/json', // Not strictly necessary for a GET request without a body
-          // You might need other headers depending on the API requirements, like an API key.
-        },
-        // body: JSON.stringify({ fen }), // Removed as FEN is now in the URL
-      });
+      const result = await evaluateWithProgress(fen, onProgress);
 
-      if (!response.ok) {
-        // Attempt to get more error information from the response if available
-        let errorMessage = `Network response was not ok (status: ${response.status})`;
-        try {
-          const errorData = await response.json();
-          errorMessage += ` - ${errorData.message || JSON.stringify(errorData)}`;
-        } catch (e) {
-          // If response is not JSON or another error occurs
-          errorMessage += ` - ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
+      if (result) {
+        return {
+          evaluation: result.evaluation,
+          depth: result.depth,
+          bestMove: null,
+        };
       }
 
-      const data = await response.json();
-
-      // The new API returns an object like {"evaluation": 7.04}
-      // It does not provide 'bestMove'.
-      return {
-        evaluation: data.evaluation,
-        bestMove: null, // Set to null or undefined as the new API doesn't provide it
-        // Note: This API doesn't provide mate, ponder, continuation, or bestMove information
-      };
+      throw new Error('Evaluation failed');
     } catch (error) {
-      console.error("Failed to fetch evaluation:", error);
-      // Depending on how you want to handle errors, you might re-throw,
-      // return a default/error object, or handle it directly.
-      throw error; // Re-throwing the error to be caught by the caller
+      console.error("Failed to evaluate position:", error);
+      throw error;
     }
   };
   const handleRemoveLink = (index) => {
