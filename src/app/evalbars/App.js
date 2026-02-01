@@ -85,6 +85,7 @@ function App() {
     moveIndicatorArrowColor: "#FFA500",
   });
 
+  // eslint-disable-next-line no-unused-vars
   const [layout, setLayout] = useState("grid");
   const [isChromaBackground, setIsChromaBackground] = useState(true);
 
