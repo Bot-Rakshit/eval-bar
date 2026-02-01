@@ -7,6 +7,7 @@ const TournamentsWrapper = styled.div`
   flex-direction: column;
   align-items: center;
 `;
+// eslint-disable-next-line no-unused-vars
 const NoBroadcastsMessage = styled.p`
   color: #faf9f6; /* White color */
   font-size: 1.2em; /* Bigger font size */
@@ -124,10 +125,12 @@ const TournamentsList = ({ onSelect }) => {
   const [tournaments, setTournaments] = useState([]);
   const [filteredTournaments, setFilteredTournaments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [checkedItems, setCheckedItems] = useState({});
   const [customUrl, setCustomUrl] = useState("");
   const [tournamentId, setTournamentId] = useState("");
+  // eslint-disable-next-line no-unused-vars
   const [broadcasts, setBroadcasts] = useState(true);
 
   useEffect(() => {
@@ -224,7 +227,7 @@ const TournamentsList = ({ onSelect }) => {
               <img
                 className="card-image"
                 src={tournament.image}
-                alt="Tournament Image"
+                alt="Tournament"
               />
             )}
             <input

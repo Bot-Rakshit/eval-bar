@@ -188,6 +188,7 @@ function App() {
       throw error;
     }
   };
+  // eslint-disable-next-line no-unused-vars
   const handleRemoveLink = (index) => {
     setLinks((prevLinks) => prevLinks.filter((link, i) => i !== index));
   };
@@ -687,6 +688,7 @@ function App() {
       }, 2000);
       return () => clearInterval(interval);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [links.length, isGameDataLoaded]); // Only recreate interval when links count changes
 
   useEffect(() => {
@@ -696,6 +698,7 @@ function App() {
     if (tournamentId) {
       handleTournamentSelection([tournamentId]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -744,6 +747,7 @@ function App() {
         navigate("/"); // Navigate to home on error
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stateData, navigate]); // Added navigate to dependency array
 
   // useEffect for automatic round transition
@@ -860,6 +864,7 @@ function App() {
         clearInterval(intervalId);
       };
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBroadcastMode, currentTournamentId, broadcastIDs, navigate, customStyles]); // Ensure all dependencies are listed
 
   // useEffect for auto-populating eval bars after a round transition

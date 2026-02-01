@@ -173,9 +173,7 @@ function EvalBar({
     return `${hours}:${minutes<10 ? 0 : ""}${minutes}:${seconds<10 ? 0 : ""}${seconds}`
   }
 
-  const displayResult = result !== null ? result : formatEvaluation(getDisplayEvaluation());
 
-  const evalDisplayClass = result !== null ? "result" : "evaluation-value";
 
   return (
     <Box
@@ -378,12 +376,6 @@ function EvalBar({
   );
 }
 
-// get the last move from FEN
 
-function getLastMove(fen) {
-  const parts = fen.split(" ");
-  if (parts.length < 4) return null;
-  return parts[parts.length - 1];
-}
 
 export default EvalBar;
