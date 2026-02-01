@@ -90,6 +90,8 @@ function App() {
 
   const allGames = useRef("");
   const abortControllers = useRef({});
+  const linksRef = useRef([]);
+  const isUpdatingRef = useRef(false);
 
   const { stateData } = useParams();
   const navigate = useNavigate();
@@ -363,7 +365,7 @@ function App() {
 
           const newData = new TextDecoder().decode(value);
           allGames.current += newData;
-          await updateEvaluations();
+          await updateAllLinksFromStream();
           fetchAvailableGames();
           setTimeout(processStream, 10);
         } catch (error) {
@@ -488,10 +490,18 @@ function App() {
       let clocks = specificGamePgn.match(/\[%clk (.*?)\]/g);
       let clocksList = clocks ? clocks.map(clock => clock.split(" ")[1].split("]")[0]) : [];
 
+      // Parse result - check both end of PGN and Result header
       let gameResult = null;
-      const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)$/);
+      // Try end of PGN first (with optional whitespace)
+      const resultMatch = specificGamePgn.match(/(1-0|0-1|1\/2-1\/2)\s*$/);
       if (resultMatch) {
         gameResult = resultMatch[1] === "1/2-1/2" ? "Draw" : resultMatch[1];
+      } else {
+        // Fallback: check Result header
+        const resultHeaderMatch = specificGamePgn.match(/\[Result\s+"(1-0|0-1|1\/2-1\/2)"\]/);
+        if (resultHeaderMatch) {
+          gameResult = resultHeaderMatch[1] === "1/2-1/2" ? "Draw" : resultHeaderMatch[1];
+        }
       }
 
       try {
@@ -527,29 +537,47 @@ function App() {
             }
           );
 
-          if (finalFen && finalFen !== link.lastFEN) {
-            const evalData = await fetchEvaluation(finalFen);
+          // Parse clock and turn data
+          let whiteTime = link.whiteTime || 0;
+          let blackTime = link.blackTime || 0;
+          let turn = link.turn || "";
+          let moveNumber = link.moveNumber || 0;
 
-            let whiteTime = 0, blackTime = 0, turn = "";
-            if (clocksList.length >= 2) {
-              if (clocksList.length % 2) {
-                whiteTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
-                blackTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
-                turn = "black";
-              } else {
-                blackTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
-                whiteTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
-                turn = "white";
+          if (clocksList.length >= 2) {
+            if (clocksList.length % 2) {
+              whiteTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
+              blackTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
+              turn = "black";
+            } else {
+              blackTime = convertClockToSeconds(clocksList[clocksList.length - 1]);
+              whiteTime = convertClockToSeconds(clocksList[clocksList.length - 2]);
+              turn = "white";
+            }
+            moveNumber = Math.floor(clocksList.length / 2) + 1;
+          }
+
+          const fenChanged = finalFen && finalFen !== link.lastFEN;
+          const resultChanged = gameResult && gameResult !== link.result;
+
+          // Update if FEN changed OR result changed
+          if (fenChanged || resultChanged) {
+            let evaluation = link.evaluation;
+            let mateIn = link.mateIn;
+
+            // Only fetch new evaluation if FEN changed and no result yet
+            if (fenChanged && !gameResult) {
+              const evalData = await fetchEvaluation(finalFen);
+              if (evalData) {
+                evaluation = evalData.evaluation;
+                mateIn = evalData.mateIn;
               }
             }
 
-            const moveNumber = Math.floor(clocksList.length / 2) + 1;
-
             return {
               ...link,
-              evaluation: evalData.evaluation,
-              mateIn: evalData.mateIn,
-              lastFEN: finalFen,
+              evaluation,
+              mateIn,
+              lastFEN: finalFen || link.lastFEN,
               result: gameResult,
               whiteTime,
               blackTime,
@@ -567,25 +595,21 @@ function App() {
     return link;
   };
 
-  const updateEvaluations = async () => {
-    console.log("Updating evaluations for links:", links);
-    for (let link of links) {
+  // Update all links from streaming data
+  const updateAllLinksFromStream = async () => {
+    const currentLinks = linksRef.current;
+    for (let link of currentLinks) {
       try {
         const updatedLink = await updateEvaluationsForLink(link);
         if (updatedLink && updatedLink.whitePlayer && updatedLink.blackPlayer) {
           setLinks(prevLinks => prevLinks.map(l =>
             l.whitePlayer === updatedLink.whitePlayer && l.blackPlayer === updatedLink.blackPlayer ? updatedLink : l
           ));
-
-          // Check for blunder only if game data is loaded and we have a previous evaluation
-          if (isGameDataLoaded && link.evaluation !== null && Math.abs(updatedLink.evaluation - link.evaluation) > 2) {
-            handleBlunder(links.indexOf(link));
-          }
         }
       } catch (error) {
         console.error("Error updating evaluation for link:", link, error);
       }
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   };
 
@@ -620,14 +644,50 @@ function App() {
       .catch((err) => console.error("Failed to copy link:", err));
   };
 
+  // Keep linksRef in sync with links state
+  useEffect(() => {
+    linksRef.current = links;
+  }, [links]);
+
+  // Periodic evaluation updates for streaming mode
   useEffect(() => {
     if (links.length) {
-      const interval = setInterval(() => {
-        updateEvaluations();
+      const interval = setInterval(async () => {
+        // Skip if already updating to prevent race conditions
+        if (isUpdatingRef.current) return;
+        isUpdatingRef.current = true;
+        
+        try {
+          const currentLinks = linksRef.current;
+          for (let link of currentLinks) {
+            try {
+              const updatedLink = await updateEvaluationsForLink(link);
+              if (updatedLink && updatedLink.whitePlayer && updatedLink.blackPlayer) {
+                setLinks(prevLinks => prevLinks.map(l =>
+                  l.whitePlayer === updatedLink.whitePlayer && l.blackPlayer === updatedLink.blackPlayer ? updatedLink : l
+                ));
+
+                // Check for blunder
+                if (isGameDataLoaded && link.evaluation !== null && updatedLink.evaluation !== null && 
+                    Math.abs(updatedLink.evaluation - link.evaluation) > 2) {
+                  const linkIndex = currentLinks.findIndex(l => 
+                    l.whitePlayer === link.whitePlayer && l.blackPlayer === link.blackPlayer
+                  );
+                  if (linkIndex >= 0) handleBlunder(linkIndex);
+                }
+              }
+            } catch (error) {
+              console.error("Error updating evaluation for link:", link, error);
+            }
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          }
+        } finally {
+          isUpdatingRef.current = false;
+        }
       }, 2000);
       return () => clearInterval(interval);
     }
-  }, [links]);
+  }, [links.length, isGameDataLoaded]); // Only recreate interval when links count changes
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
