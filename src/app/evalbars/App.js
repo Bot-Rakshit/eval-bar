@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Toolbar, Button, Container, Box } from "@mui/material";
+import { Toolbar, Button, Container, Box, Autocomplete, TextField } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
@@ -105,6 +105,9 @@ function App() {
   const [lastBlunderTime, setLastBlunderTime] = useState(0);
   const blunderCooldown = 10000; // 10 seconds cooldown between blunders
 
+  const [selectionMode, setSelectionMode] = useState("games"); // "games" | "player"
+  const [followedPlayer, setFollowedPlayer] = useState("");
+
   // Auto-reload when new version is deployed
   const currentVersion = useRef(null);
   useEffect(() => {
@@ -198,6 +201,8 @@ function App() {
     console.log("Received Tournament Data:", selectedTournament);
     setIsBroadcastLoaded(true);
     setIsChromaBackground(true);
+    setFollowedPlayer("");
+    setSelectionMode("games");
 
     if (selectedTournament && selectedTournament.roundId && selectedTournament.tournamentId) {
       setCurrentTournamentId(selectedTournament.tournamentId); // Store tournamentId
@@ -408,6 +413,57 @@ function App() {
       setSelectedGames((prevGames) => [...prevGames, game]);
     }
   };
+
+  const followModeActive = selectionMode === "player" && followedPlayer;
+
+  const playersList = Array.from(
+    availableGames.reduce((players, game) => {
+      const [white, black] = game.split(" - ");
+      if (white) players.add(white);
+      if (black) players.add(black);
+      return players;
+    }, new Set())
+  ).sort();
+
+  // In follow-player mode, automatically add the followed player's game
+  // whenever it becomes available (including after a round transition)
+  useEffect(() => {
+    if (!followModeActive || !followedPlayer) return;
+
+    const game = availableGames.find(
+      (g) =>
+        g.startsWith(`${followedPlayer} - `) ||
+        g.endsWith(` - ${followedPlayer}`)
+    );
+
+    if (!game) return;
+
+    const [whitePlayer, blackPlayer] = game.split(" - ");
+    setLinks((prevLinks) => {
+      if (
+        prevLinks.some(
+          (l) => l.whitePlayer === whitePlayer && l.blackPlayer === blackPlayer
+        )
+      ) {
+        return prevLinks;
+      }
+      return [
+        ...prevLinks,
+        {
+          evaluation: null,
+          whitePlayer,
+          blackPlayer,
+          error: null,
+          lastFEN: "",
+          whiteTime: 0,
+          blackTime: 0,
+          turn: "",
+          moveNumber: 0,
+        },
+      ];
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [availableGames, followedPlayer, selectionMode]);
 
   const addSelectedGames = () => {
     for (let game of selectedGames) {
@@ -719,6 +775,8 @@ function App() {
         setCurrentTournamentId(decodedData.tournamentId);
         setBroadcastIDs([decodedData.roundId]); // Storing as an array for consistency, but effectively currentRoundId
         setCustomStyles(decodedData.customStyles || customStyles); // Fallback to default if not in URL
+        setFollowedPlayer("");
+        setSelectionMode("games");
 
         setIsBroadcastLoaded(true);
         document.body.classList.add("chroma-background"); // Ensure background is set
@@ -753,9 +811,9 @@ function App() {
 
   // useEffect for automatic round transition
   useEffect(() => {
-    if (isBroadcastMode && currentTournamentId && broadcastIDs.length > 0) {
+    if ((isBroadcastMode || followModeActive) && currentTournamentId && broadcastIDs.length > 0) {
       const currentRoundId = broadcastIDs[0];
-      console.log(`Broadcast mode active. Monitoring tournament ${currentTournamentId}, round ${currentRoundId}`);
+      console.log(`Round monitor active. Monitoring tournament ${currentTournamentId}, round ${currentRoundId}`);
 
       const checkForNextRound = async () => {
         console.log(`Checking for next round for tournament: ${currentTournamentId}, current round: ${currentRoundId}`);
@@ -819,15 +877,24 @@ function App() {
               delete abortControllers.current[currentRoundId];
             }
             allGames.current = ""; // Reset game data
-            setLinks([]); // Clear old game links
             setSelectedGames([]); // Clear selected games from previous round
             setAvailableGames([]); // Clear available games from old round
-
-            setIsTransitioningRound(true); // Signal that a transition is in progress
 
             // Update state to new round
             setBroadcastIDs([nextOngoingRound.id]);
             // `currentTournamentId` remains the same
+
+            if (followModeActive) {
+              // Follow-player mode: clear old eval bars and let the follow effect
+              // automatically pick up the followed player's game from the new round.
+              setLinks([]);
+              console.log(`Follow mode: waiting for ${followedPlayer}'s game in round ${nextOngoingRound.id}.`);
+              startStreaming(nextOngoingRound.id);
+              return;
+            }
+
+            setLinks([]); // Clear old game links
+            setIsTransitioningRound(true); // Signal that a transition is in progress
 
             // Update the URL first
             // This part requires careful handling of stateData structure
@@ -866,11 +933,11 @@ function App() {
       };
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isBroadcastMode, currentTournamentId, broadcastIDs, navigate, customStyles]); // Ensure all dependencies are listed
+  }, [isBroadcastMode, currentTournamentId, broadcastIDs, navigate, customStyles, followedPlayer, selectionMode]); // Ensure all dependencies are listed
 
   // useEffect for auto-populating eval bars after a round transition
   useEffect(() => {
-    if (isTransitioningRound && availableGames.length > 0) {
+    if (isTransitioningRound && availableGames.length > 0 && !followModeActive) {
       console.log("Auto-populating eval bars for new round with games:", availableGames);
       const newLinks = availableGames.map(gameString => {
         const [whitePlayer, blackPlayer] = gameString.split(" - ");
@@ -889,7 +956,7 @@ function App() {
       setLinks(newLinks);
       setIsTransitioningRound(false); // Reset the flag
     }
-  }, [availableGames, isTransitioningRound, setIsTransitioningRound, setLinks]);
+  }, [availableGames, isTransitioningRound, followModeActive]);
 
 
   useEffect(() => {
@@ -931,22 +998,76 @@ function App() {
                   marginBottom: 2,
                 }}
               >
-                {availableGames.map((game, index) => (
-                  <GameCard
-                    key={index}
-                    game={game}
-                    onClick={() => handleGameSelection(game)}
-                    isSelected={selectedGames.includes(game)}
-                  />
-                ))}
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={addSelectedGames}
-                >
-                  Add Selected Games Bar
-                </Button>
+                <Box display="flex" alignItems="center" gap={1} mb={2}>
+                  <Button
+                    variant={selectionMode === "games" ? "contained" : "outlined"}
+                    color="primary"
+                    onClick={() => setSelectionMode("games")}
+                  >
+                    Select Games
+                  </Button>
+                  <Button
+                    variant={selectionMode === "player" ? "contained" : "outlined"}
+                    color="primary"
+                    onClick={() => setSelectionMode("player")}
+                  >
+                    Follow Player
+                  </Button>
+                </Box>
+                {selectionMode === "player" ? (
+                  <Box mb={2} maxWidth={420}>
+                    <Autocomplete
+                      freeSolo
+                      options={playersList}
+                      value={followedPlayer}
+                      onInputChange={(event, newValue) => setFollowedPlayer(newValue)}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Follow a player"
+                          variant="outlined"
+                          size="small"
+                          placeholder="Search or type a player name"
+                        />
+                      )}
+                    />
+                    {followedPlayer && (
+                      <Box mt={1} display="flex" alignItems="center" gap={1}>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={() => setFollowedPlayer("")}
+                        >
+                          Stop Following
+                        </Button>
+                        {links.length === 0 && (
+                          <span style={{ fontSize: "0.85em", color: "#ADD8E6" }}>
+                            Waiting for {followedPlayer}'s game to appear...
+                          </span>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                ) : (
+                  <>
+                    {availableGames.map((game, index) => (
+                      <GameCard
+                        key={index}
+                        game={game}
+                        onClick={() => handleGameSelection(game)}
+                        isSelected={selectedGames.includes(game)}
+                      />
+                    ))}
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      style={{ marginTop: "10px", marginRight: "10px" }}
+                      onClick={addSelectedGames}
+                    >
+                      Add Selected Games Bar
+                    </Button>
+                  </>
+                )}
                 <Button
                   variant="contained"
                   color="secondary"
