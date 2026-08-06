@@ -1,136 +1,196 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 
+const ACCENT = "#E79D29";
+const ACCENT_STRONG = "#f2b04a";
+const TEXT = "#f4f4f5";
+const TEXT_MUTED = "#9b9ba1";
+const PANEL_BG = "rgba(255, 255, 255, 0.045)";
+const PANEL_BORDER = "rgba(255, 255, 255, 0.09)";
+const ACCENT_SOFT = "rgba(231, 157, 41, 0.16)";
+
 const TournamentsWrapper = styled.div`
-  margin-top: 5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
+  max-width: 720px;
+  margin: 1.5rem auto 0;
+  padding: 0 16px;
+  box-sizing: border-box;
 `;
-// eslint-disable-next-line no-unused-vars
+
 const NoBroadcastsMessage = styled.p`
-  color: #faf9f6; /* White color */
-  font-size: 1.2em; /* Bigger font size */
+  color: ${TEXT_MUTED};
+  font-size: 0.9em;
+  text-align: center;
 `;
 
 const Card = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  border: ${(props) =>
-    props.selected ? "10px solid #4CAF50" : "1px solid #ccc"};
-  padding: 1rem;
-  margin: 1rem 0;
-  border-radius: 1rem;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1.1rem 1.25rem;
+  margin: 0.5rem 0;
+  border-radius: 14px;
   cursor: pointer;
-  background-color: ${(props) =>
-    props.selected ? "rgba(76, 175, 80, 0.3)" : "rgba(1, 1, 4, 0.6)"};
-  transition: all 0.3s ease-in-out;
-  transform: perspective(1px) translateZ(0);
-  width: 80%;
-  max-width: 600px;
+  background: ${PANEL_BG};
+  border: 1px solid ${(props) => (props.selected ? ACCENT : PANEL_BORDER)};
+  transition: border-color 160ms ease, background-color 160ms ease, transform 120ms ease;
 
-  &:hover {
-    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.2);
-    border-color: #4caf50;
-    transform: scale(1.05);
+  &:active {
+    transform: scale(0.99);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: ${ACCENT};
+    }
   }
 
   .card-image {
-    width: 100%; /* Adjust the width of the image */
-    height: auto; /* Maintain aspect ratio */
-    margin-bottom: 1rem; /* Add some space below the image */
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
   }
 `;
 
 const CardHeader = styled.div`
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
   width: 100%;
 `;
 
 const CardTitle = styled.h2`
-  font-size: 1.8em;
-  color: #faf9f6;
-  margin-bottom: 1rem;
+  font-size: 1.05em;
+  font-weight: 700;
+  color: ${TEXT};
+  margin: 0;
 `;
 
 const CardDate = styled.p`
-  font-size: 1em;
-  color: #faf9f6;
-  margin-bottom: 1rem;
+  font-size: 0.8em;
+  color: ${TEXT_MUTED};
+  margin: 0;
+  white-space: nowrap;
 `;
 
 const CardDescription = styled.p`
-  font-size: 1em;
-  color: #faf9f6;
-  margin-bottom: 1rem;
-  height: 4em;
+  font-size: 0.85em;
+  color: ${TEXT_MUTED};
+  margin: 0;
+  max-height: 4em;
   overflow: hidden;
-  text-overflow: ellipsis;
 `;
 
-const Button = styled.a`
-  margin-top: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #4caf50;
-  color: white;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.3s, box-shadow 0.3s;
+const WebsiteLink = styled.a`
+  align-self: flex-start;
+  margin-top: 0.4rem;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: ${ACCENT};
+  text-decoration: none;
+  padding: 5px 12px;
+  border: 1px solid ${ACCENT};
+  border-radius: 8px;
+  transition: background-color 160ms ease, color 160ms ease;
 
-  &:hover {
-    background-color: #36a420;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${ACCENT_SOFT};
+    }
   }
 `;
 
 const Title = styled.h1`
-  border-bottom: 5px solid #4caf50;
-  padding-bottom: 1rem;
-  font-size: 2em;
-  font-weight: bold;
-  color: #4caf50;
-  text-align: center;
-  margin-bottom: 3rem;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: ${ACCENT};
+  margin: 0 0 1.5rem;
 `;
 
 const SearchWrapper = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  margin-bottom: 2rem;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  width: 100%;
 `;
 
 const SearchInput = styled.input`
-  margin-right: 1rem;
-  padding: 0.5rem;
-  font-size: 1em;
+  flex: 1;
+  min-width: 160px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 13px;
+  color: ${TEXT};
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid ${PANEL_BORDER};
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 160ms ease;
+
+  &:focus {
+    border-color: ${ACCENT};
+  }
+
+  &::placeholder {
+    color: ${TEXT_MUTED};
+  }
 `;
 
 const SearchButton = styled.button`
-  padding: 0.5rem 1rem;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 0.5rem;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid ${ACCENT};
+  background: ${ACCENT};
+  color: #161616;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
 
-  &:hover {
-    background-color: #36a420;
+  &:active {
+    transform: scale(0.97);
   }
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: ${ACCENT_STRONG};
+      border-color: ${ACCENT_STRONG};
+    }
+  }
+`;
+
+const SelectIndicator = styled.span`
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid ${(props) => (props.selected ? ACCENT : PANEL_BORDER)};
+  background: ${(props) => (props.selected ? ACCENT : "transparent")};
+  transition: background-color 160ms ease, border-color 160ms ease;
 `;
 
 const TournamentsList = ({ onSelect }) => {
   const [tournaments, setTournaments] = useState([]);
   const [filteredTournaments, setFilteredTournaments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  // eslint-disable-next-line no-unused-vars
-  const [selectedTournaments, setSelectedTournaments] = useState([]);
-  const [checkedItems, setCheckedItems] = useState({});
+  const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const [customUrl, setCustomUrl] = useState("");
   const [tournamentId, setTournamentId] = useState("");
-  // eslint-disable-next-line no-unused-vars
   const [broadcasts, setBroadcasts] = useState(true);
 
   useEffect(() => {
@@ -199,13 +259,28 @@ const TournamentsList = ({ onSelect }) => {
     }
   };
 
+  const selectTournament = (tournament) => {
+    setSelectedTournamentId(tournament.tour.id);
+    const ongoingRound = tournament.rounds.find(
+      (round) => round.ongoing === true
+    ) || tournament.rounds[0];
+    if (ongoingRound) {
+      onSelect({
+        tournamentId: tournament.tour.id,
+        roundId: ongoingRound.id,
+        gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
+      });
+    }
+  };
+
   return (
     <TournamentsWrapper>
-      <Title>LIVE BROADCASTS</Title>
+      <Title>Live Broadcasts</Title>
       <SearchWrapper>
         <SearchInput
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder="Search tournaments..."
         />
         <SearchButton onClick={handleSearch}>Search</SearchButton>
@@ -213,16 +288,24 @@ const TournamentsList = ({ onSelect }) => {
         <SearchInput
           value={customUrl}
           onChange={handleCustomUrlChange}
+          onKeyDown={(e) => e.key === "Enter" && onSelectTournament()}
           placeholder="Enter custom Lichess URL..."
         />
         <SearchButton onClick={onSelectTournament}>Go</SearchButton>
       </SearchWrapper>
+      {!broadcasts && (
+        <NoBroadcastsMessage>
+          No live broadcasts right now — paste a custom Lichess URL above.
+        </NoBroadcastsMessage>
+      )}
       {filteredTournaments.map((tournament) =>
         tournament.tour && tournament.rounds && tournament.rounds.length > 0 ? (
           <Card
             key={tournament.tour.id}
-            selected={selectedTournaments.includes(tournament.tour.id)}
+            selected={selectedTournamentId === tournament.tour.id}
+            onClick={() => selectTournament(tournament)}
           >
+            <SelectIndicator selected={selectedTournamentId === tournament.tour.id} />
             {tournament.image && (
               <img
                 className="card-image"
@@ -230,38 +313,19 @@ const TournamentsList = ({ onSelect }) => {
                 alt="Tournament"
               />
             )}
-            <input
-              type="checkbox"
-              checked={checkedItems[tournament.tour.id]}
-              onChange={() => {
-                setCheckedItems((prevState) => ({
-                  ...prevState,
-                  [tournament.tour.id]: !prevState[tournament.tour.id],
-                }));
-                const ongoingRound = tournament.rounds.find(
-                  (round) => round.ongoing === true
-                ) || tournament.rounds[0];
-                if (ongoingRound) {
-                  onSelect({
-                    tournamentId: tournament.tour.id,
-                    roundId: ongoingRound.id,
-                    gameIDs: ongoingRound.games ? ongoingRound.games.map(game => `${game.white.name}-vs-${game.black.name}`) : []
-                  });
-                }
-              }}
-            />
             <CardHeader>
               <CardTitle>{tournament.tour.name}</CardTitle>
               <CardDate>{tournament.tour.date}</CardDate>
             </CardHeader>
             <CardDescription>{tournament.tour.description}</CardDescription>
-            <Button
+            <WebsiteLink
               href={tournament.tour.url}
               target="_blank"
               rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
             >
               Official Website
-            </Button>
+            </WebsiteLink>
           </Card>
         ) : null
       )}

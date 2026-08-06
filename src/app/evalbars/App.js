@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Toolbar, Button, Container, Box, Autocomplete, TextField } from "@mui/material";
+import { Container, Box, Autocomplete, TextField } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { EvalBar, TournamentsList, CustomizeEvalBar } from "../../components";
 import "./App.css";
@@ -16,7 +16,7 @@ const theme = createTheme({
       default: "transparent",
     },
     primary: {
-      main: "#00008b",
+      main: "#E79D29",
     },
     secondary: {
       main: "#b9bbce",
@@ -39,32 +39,15 @@ const theme = createTheme({
   ].join(","),
 });
 
-const GameCard = ({ game, onClick, isSelected }) => {
-  const variant = isSelected ? "contained" : "outlined";
-  const color = isSelected ? "tertiary" : "secondary";
-  const boxShadow = isSelected
-    ? "0px 0px 12px 2px rgba(252,188,213,0.6)"
-    : "none";
-
-  const buttonStyle = {
-    margin: "2px",
-    padding: "6px",
-    fontSize: "0.8em",
-    fontWeight: "bold",
-    boxShadow,
-  };
-
-  return (
-    <Button
-      variant={variant}
-      color={color}
-      style={buttonStyle}
-      onClick={onClick}
-    >
-      {game}
-    </Button>
-  );
-};
+const GameCard = ({ game, onClick, isSelected }) => (
+  <button
+    type="button"
+    className={isSelected ? "game-chip selected" : "game-chip"}
+    onClick={onClick}
+  >
+    {game}
+  </button>
+);
 
 function App() {
   const [broadcastIDs, setBroadcastIDs] = useState([]);
@@ -987,47 +970,39 @@ function App() {
       >
         {!isBroadcastMode && (
           <>
-            <Toolbar>
-              <Box
-                style={{ display: "flex", justifyContent: "center", flexGrow: 1.5 }}
-              >
-                <img
-                  src="https://i.imgur.com/z2fbMtT.png"
-                  alt="ChessBase India Logo"
-                  style={{ height: "100px", marginTop: "20px" }}
-                />
-              </Box>
-            </Toolbar>
+            <div className="app-header">
+              <span className="app-wordmark">
+                EVAL<span className="app-wordmark-accent">BAR</span>
+              </span>
+              <span className="app-sub">ChessBase India Broadcast Tool</span>
+            </div>
             {isBroadcastLoaded ? (
-              <Box
-                mt={4}
-                px={3}
-                sx={{
-                  backgroundColor: "rgba(50, 67, 100, 1)",
-                  padding: 2,
-                  borderRadius: 2,
-                  marginBottom: 2,
-                }}
-              >
-                <Box display="flex" alignItems="center" gap={1} mb={2}>
-                  <Button
-                    variant={selectionMode === "games" ? "contained" : "outlined"}
-                    color="primary"
-                    onClick={() => setSelectionMode("games")}
-                  >
-                    Select Games
-                  </Button>
-                  <Button
-                    variant={selectionMode === "player" ? "contained" : "outlined"}
-                    color="primary"
-                    onClick={() => setSelectionMode("player")}
-                  >
-                    Follow Player
-                  </Button>
-                </Box>
+              <div className="control-panel">
+                <div className="control-section">
+                  <span className="control-label">Selection mode</span>
+                  <div className="mode-toggle">
+                    <button
+                      type="button"
+                      className={selectionMode === "games" ? "mode-btn active" : "mode-btn"}
+                      onClick={() => setSelectionMode("games")}
+                    >
+                      Select Games
+                    </button>
+                    <button
+                      type="button"
+                      className={selectionMode === "player" ? "mode-btn active" : "mode-btn"}
+                      onClick={() => setSelectionMode("player")}
+                    >
+                      Follow Player
+                    </button>
+                  </div>
+                </div>
+
                 {selectionMode === "player" ? (
-                  <Box mb={2} maxWidth={420}>
+                  <div className="control-section">
+                    <span className="control-label">Follow</span>
                     <Autocomplete
+                      className="follow-input"
                       freeSolo
                       options={playersList}
                       value={followedPlayer}
@@ -1042,102 +1017,115 @@ function App() {
                         />
                       )}
                     />
-                    <Box mt={1} display="flex" flexWrap="wrap" alignItems="center" gap={1}>
-                      <Button
-                        variant={followAll ? "contained" : "outlined"}
-                        color="primary"
+                    <div className="follow-row">
+                      <button
+                        type="button"
+                        className={followAll ? "action-btn primary" : "action-btn"}
                         onClick={() => {
                           setFollowAll(!followAll);
                           if (!followAll) setFollowedPlayer("");
                         }}
                       >
                         Follow All Games
-                      </Button>
+                      </button>
                       {followedPlayer && !followAll && (
-                        <Button
-                          variant="outlined"
-                          color="secondary"
+                        <button
+                          type="button"
+                          className="action-btn"
                           onClick={() => setFollowedPlayer("")}
                         >
                           Stop Following
-                        </Button>
+                        </button>
                       )}
                       {followAll && (
-                        <Button
-                          variant="outlined"
-                          color="secondary"
+                        <button
+                          type="button"
+                          className="action-btn"
                           onClick={() => setFollowAll(false)}
                         >
                           Stop Following All
-                        </Button>
+                        </button>
                       )}
                       {followModeActive && links.length === 0 && (
-                        <span style={{ fontSize: "0.85em", color: "#ADD8E6" }}>
+                        <span className="follow-hint">
                           Waiting for {followAll ? "the next round's games" : `${followedPlayer}'s game`} to appear...
                         </span>
                       )}
-                    </Box>
-                  </Box>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    {availableGames.map((game, index) => (
-                      <GameCard
-                        key={index}
-                        game={game}
-                        onClick={() => handleGameSelection(game)}
-                        isSelected={selectedGames.includes(game)}
-                      />
-                    ))}
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      style={{ marginTop: "10px", marginRight: "10px" }}
+                  <div className="control-section">
+                    <span className="control-label">Games in this round</span>
+                    {availableGames.length > 0 ? (
+                      <div className="game-chip-grid">
+                        {availableGames.map((game, index) => (
+                          <GameCard
+                            key={index}
+                            game={game}
+                            onClick={() => handleGameSelection(game)}
+                            isSelected={selectedGames.includes(game)}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="control-empty">
+                        No games available yet — waiting for the round to start.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="control-actions">
+                  {selectionMode === "games" && (
+                    <button
+                      type="button"
+                      className="action-btn primary"
                       onClick={addSelectedGames}
                     >
-                      Add Selected Games Bar
-                    </Button>
-                  </>
-                )}
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  style={{ marginTop: "10px", marginRight: "10px" }}
-                  onClick={handleDemoBlunder}
-                >
-                  Demo Blunder
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  style={{ marginTop: "10px" }}
-                  onClick={handleGenerateLink}
-                >
-                  Create Unique Link
-                </Button>
-                <CustomizeEvalBar
-                  customStyles={customStyles}
-                  setCustomStyles={setCustomStyles}
-                />
-              </Box>
+                      Add Selected Games
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="action-btn primary"
+                    onClick={handleGenerateLink}
+                  >
+                    Create Unique Link
+                  </button>
+                  <button
+                    type="button"
+                    className="action-btn"
+                    onClick={handleDemoBlunder}
+                  >
+                    Demo Blunder
+                  </button>
+                  <CustomizeEvalBar
+                    customStyles={customStyles}
+                    setCustomStyles={setCustomStyles}
+                  />
+                </div>
+              </div>
             ) : (
               <>
                 <div className="full-width">
                   <TournamentsList onSelect={handleTournamentSelection} />
                 </div>
-                <Box mt={4} px={3} textAlign="center">
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={addExampleBar}
-                    style={{ marginBottom: "20px" }}
-                  >
-                    Add Example Bar
-                  </Button>
-                  <CustomizeEvalBar
-                    customStyles={customStyles}
-                    setCustomStyles={setCustomStyles}
-                  />
-                </Box>
+                <div className="control-panel">
+                  <span className="control-label">Preview & theme</span>
+                  <div className="control-actions control-actions-flush">
+                    <button
+                      type="button"
+                      className="action-btn"
+                      onClick={addExampleBar}
+                    >
+                      Add Example Bar
+                    </button>
+                    <CustomizeEvalBar
+                      customStyles={customStyles}
+                      setCustomStyles={setCustomStyles}
+                    />
+                  </div>
+                </div>
               </>
             )}
           </>

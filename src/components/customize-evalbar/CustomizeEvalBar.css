@@ -1,111 +1,91 @@
-/* Base Styling for the Customize Evaluation Bar Container */
+/* Customize eval bar — matches the control-panel design language in App.css */
+
 .customize-eval-bar {
-    background-color: #003366; /* Deep navy blue background */
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-    color: #ffffff;
-    transition: all 0.3s ease-in-out;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 100%;
 }
 
-/* Hover effect for the entire container */
-.customize-eval-bar:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-}
-
-/* Styling for buttons and labels */
-.customize-eval-bar button, .customize-eval-bar label {
-    background-color: #0077B6; /* Vibrant blue */
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
+.customize-eval-bar button,
+.customize-eval-bar label {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text, #f4f4f5);
+    background: var(--field-bg, rgba(0, 0, 0, 0.35));
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.09));
+    padding: 9px 18px;
+    border-radius: 10px;
     cursor: pointer;
     text-align: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: all 0.3s ease-in-out;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
 }
 
-/* Hover effect for buttons and labels */
-.customize-eval-bar button:hover, .customize-eval-bar label:hover {
-    background-color: #0096c7; /* Lighter blue */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+.customize-eval-bar button:active,
+.customize-eval-bar label:active {
+    transform: scale(0.97);
 }
 
-/* Customization content area */
+@media (hover: hover) and (pointer: fine) {
+    .customize-eval-bar button:hover,
+    .customize-eval-bar label:hover {
+        border-color: rgba(255, 255, 255, 0.28);
+    }
+}
+
 .customization-content {
-    margin-top: 20px;
-    border: 2px solid #0096c7;
-    padding: 20px;
+    width: 100%;
+    margin-top: 6px;
+    padding: 16px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    background-color: #001d3d; /* Darker shade for contrast */
-    transition: all 0.3s ease-in-out;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.09));
+    background: var(--field-bg, rgba(0, 0, 0, 0.35));
+    box-sizing: border-box;
 }
 
-/* Dropdown Select Component */
 .customization-content select {
     width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    border: 2px solid #0077B6;
-    background-color: #0d0b0b;
-    color: #e0e3e7;
-    font-size: 16px;
-    transition: border-color 0.3s ease;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.09));
+    background: #141416;
+    color: var(--text, #f4f4f5);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 160ms ease;
 }
 
 .customization-content select:focus {
-    border-color: #25bdef;
+    border-color: var(--accent, #E79D29);
 }
 
-/* Save Button Styling */
-.save-button {
-    background-color: #28a745; /* Green for confirmation */
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease-in-out;
+.customize-eval-bar .save-button {
+    background: var(--accent, #E79D29);
+    border-color: var(--accent, #E79D29);
+    color: #161616;
 }
 
-.save-button:hover {
-    background-color: #218838; /* Darker green on hover */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+@media (hover: hover) and (pointer: fine) {
+    .customize-eval-bar .save-button:hover {
+        background: var(--accent-strong, #f2b04a);
+        border-color: var(--accent-strong, #f2b04a);
+    }
 }
 
-/* Color Picker Container */
 .color-picker-container {
-    border: 2px solid #0077B6;
-    padding: 15px;
-    border-radius: 12px;
-    background-color: #010000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease-in-out;
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.09));
+    background: rgba(0, 0, 0, 0.3);
 }
 
-/* Label for Currently Customizing Component */
 .customizing-label {
-    margin-bottom: 15px;
-    font-size: 1.4rem;
-    color: #d1e3f4;
-    font-weight: bold;
-    transition: color 0.3s ease-in-out;
-}
-
-/* General button styling */
-.primary-button {
-    width: auto; /* Adjust width as needed */
-    padding: 10px 20px;
-    margin: 5px; /* Spacing between buttons */
-    display: inline-block; /* For layout */
-    transition: transform 0.2s ease-in-out;
-}
-
-.primary-button:hover {
-    transform: scale(1.05);
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #9b9ba1);
 }

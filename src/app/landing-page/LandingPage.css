@@ -1,73 +1,106 @@
 .landing-container {
-    color: #fff;
-    background-color: #180f26;
-    font-family: 'Arial', sans-serif;
+    color: #f4f4f5;
+    background-color: #0b0b0d;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
-header {
-    padding: 20px;
-    text-align: center;
+.landing-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 40px 16px 8px;
 }
 
-header img {
-    max-width: 30%;
-    height: auto;
+.landing-wordmark {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0.24em;
+    color: #f4f4f5;
+}
+
+.landing-wordmark-accent {
+    color: #E79D29;
+}
+
+.landing-sub {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #9b9ba1;
 }
 
 main {
     flex-grow: 1;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
     padding: 20px;
+    box-sizing: border-box;
 }
 
 .intro h1 {
     text-align: center;
-    margin-bottom: 10px;
-    font-size: 2.5rem;
+    margin: 24px 0 8px;
+    font-size: 2rem;
+    font-weight: 700;
 }
 
 .intro p {
     text-align: center;
-    margin-bottom: 20px;
+    margin: 0 0 32px;
+    color: #9b9ba1;
+    font-size: 0.95rem;
 }
 
 .products {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
 }
 
 .product {
-    background-color: #4f4ea092;
-    padding: 20px;
-    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    padding: 22px;
+    border-radius: 14px;
     text-decoration: none;
     color: inherit;
-}
-.product:hover {
-    transform : scale(1.1);
-    border : 5px solid #ffffff;
-    transition: all 0.2s ease-in-out;
+    transition: border-color 160ms ease, background-color 160ms ease, transform 120ms ease;
 }
 
-.product img {
-    width: 100%;
-    border-radius: 4px;
-    margin-bottom: 10px;
+@media (hover: hover) and (pointer: fine) {
+    .product:hover {
+        border-color: #E79D29;
+    }
 }
 
+.product:active {
+    transform: scale(0.98);
+}
+
+.product h2 {
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #f4f4f5;
+}
+
+.product p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #9b9ba1;
+}
 
 footer {
-    background-color: #333;
-    padding: 10px;
+    padding: 16px;
     text-align: center;
-    color: #fff
-}
-
-footer a {
-    color: #FF0000; /* Your desired color */
+    color: #9b9ba1;
+    font-size: 0.8rem;
 }
 
 @media (max-width: 768px) {
