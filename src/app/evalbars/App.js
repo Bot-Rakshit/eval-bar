@@ -107,6 +107,7 @@ function App() {
 
   const [selectionMode, setSelectionMode] = useState("games"); // "games" | "player"
   const [followedPlayer, setFollowedPlayer] = useState("");
+  const [followAll, setFollowAll] = useState(false);
 
   // Auto-reload when new version is deployed
   const currentVersion = useRef(null);
@@ -203,6 +204,7 @@ function App() {
     setIsChromaBackground(true);
     setFollowedPlayer("");
     setSelectionMode("games");
+    setFollowAll(false);
 
     if (selectedTournament && selectedTournament.roundId && selectedTournament.tournamentId) {
       setCurrentTournamentId(selectedTournament.tournamentId); // Store tournamentId
@@ -414,7 +416,8 @@ function App() {
     }
   };
 
-  const followModeActive = selectionMode === "player" && followedPlayer;
+  const followModeActive =
+    selectionMode === "player" && (followedPlayer || followAll);
 
   const playersList = Array.from(
     availableGames.reduce((players, game) => {
@@ -425,31 +428,37 @@ function App() {
     }, new Set())
   ).sort();
 
-  // In follow-player mode, automatically add the followed player's game
-  // whenever it becomes available (including after a round transition)
+  // In follow-player mode, automatically add the followed games
+  // whenever they become available (including after a round transition).
+  // followAll adds every game in the round; otherwise only the
+  // followed player's game is added.
   useEffect(() => {
-    if (!followModeActive || !followedPlayer) return;
+    if (!followModeActive) return;
 
-    const game = availableGames.find(
-      (g) =>
-        g.startsWith(`${followedPlayer} - `) ||
-        g.endsWith(` - ${followedPlayer}`)
-    );
+    const gamesToAdd = followAll
+      ? availableGames
+      : availableGames.filter(
+          (g) =>
+            g.startsWith(`${followedPlayer} - `) ||
+            g.endsWith(` - ${followedPlayer}`)
+        );
 
-    if (!game) return;
+    if (gamesToAdd.length === 0) return;
 
-    const [whitePlayer, blackPlayer] = game.split(" - ");
     setLinks((prevLinks) => {
-      if (
-        prevLinks.some(
-          (l) => l.whitePlayer === whitePlayer && l.blackPlayer === blackPlayer
-        )
-      ) {
-        return prevLinks;
-      }
-      return [
-        ...prevLinks,
-        {
+      const newLinks = [...prevLinks];
+      let changed = false;
+      for (const game of gamesToAdd) {
+        const [whitePlayer, blackPlayer] = game.split(" - ");
+        if (
+          newLinks.some(
+            (l) =>
+              l.whitePlayer === whitePlayer && l.blackPlayer === blackPlayer
+          )
+        ) {
+          continue;
+        }
+        newLinks.push({
           evaluation: null,
           whitePlayer,
           blackPlayer,
@@ -459,11 +468,13 @@ function App() {
           blackTime: 0,
           turn: "",
           moveNumber: 0,
-        },
-      ];
+        });
+        changed = true;
+      }
+      return changed ? newLinks : prevLinks;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availableGames, followedPlayer, selectionMode]);
+  }, [availableGames, followedPlayer, selectionMode, followAll, followModeActive]);
 
   const addSelectedGames = () => {
     for (let game of selectedGames) {
@@ -777,6 +788,7 @@ function App() {
         setCustomStyles(decodedData.customStyles || customStyles); // Fallback to default if not in URL
         setFollowedPlayer("");
         setSelectionMode("games");
+        setFollowAll(false);
 
         setIsBroadcastLoaded(true);
         document.body.classList.add("chroma-background"); // Ensure background is set
@@ -885,10 +897,10 @@ function App() {
             // `currentTournamentId` remains the same
 
             if (followModeActive) {
-              // Follow-player mode: clear old eval bars and let the follow effect
-              // automatically pick up the followed player's game from the new round.
+              // Follow mode: clear old eval bars and let the follow effect
+              // automatically pick up the games of the new round.
               setLinks([]);
-              console.log(`Follow mode: waiting for ${followedPlayer}'s game in round ${nextOngoingRound.id}.`);
+              console.log(`Follow mode: waiting for games in round ${nextOngoingRound.id}.`);
               startStreaming(nextOngoingRound.id);
               return;
             }
@@ -908,12 +920,11 @@ function App() {
             navigate(`/broadcast/${serializedNewState}`, { replace: true });
             // {replace: true} avoids polluting browser history with intermediate round changes.
 
-            // Start streaming for the new round AFTER URL and state are set
-            // Note: The navigation might cause a re-render and effect re-runs.
-            // `startStreaming` should ideally be robust to this or be called from an effect
-            // that specifically handles the new roundId if `stateData` changes.
-            // For now, direct call after navigate. If issues arise, this might need refinement.
-            startStreaming(nextOngoingRound.id);
+            // Do NOT call startStreaming here: the navigation triggers the
+            // stateData effect, which aborts all controllers and restarts
+            // streaming for the new roundId. Calling it here as well caused a
+            // double-stream/abort race that left the new round in slow
+            // polling mode instead of live streaming.
 
           } else {
             console.log(`No next ongoing round found for tournament ${currentTournamentId}.`);
@@ -1031,8 +1042,18 @@ function App() {
                         />
                       )}
                     />
-                    {followedPlayer && (
-                      <Box mt={1} display="flex" alignItems="center" gap={1}>
+                    <Box mt={1} display="flex" flexWrap="wrap" alignItems="center" gap={1}>
+                      <Button
+                        variant={followAll ? "contained" : "outlined"}
+                        color="primary"
+                        onClick={() => {
+                          setFollowAll(!followAll);
+                          if (!followAll) setFollowedPlayer("");
+                        }}
+                      >
+                        Follow All Games
+                      </Button>
+                      {followedPlayer && !followAll && (
                         <Button
                           variant="outlined"
                           color="secondary"
@@ -1040,13 +1061,22 @@ function App() {
                         >
                           Stop Following
                         </Button>
-                        {links.length === 0 && (
-                          <span style={{ fontSize: "0.85em", color: "#ADD8E6" }}>
-                            Waiting for {followedPlayer}'s game to appear...
-                          </span>
-                        )}
-                      </Box>
-                    )}
+                      )}
+                      {followAll && (
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          onClick={() => setFollowAll(false)}
+                        >
+                          Stop Following All
+                        </Button>
+                      )}
+                      {followModeActive && links.length === 0 && (
+                        <span style={{ fontSize: "0.85em", color: "#ADD8E6" }}>
+                          Waiting for {followAll ? "the next round's games" : `${followedPlayer}'s game`} to appear...
+                        </span>
+                      )}
+                    </Box>
                   </Box>
                 ) : (
                   <>
