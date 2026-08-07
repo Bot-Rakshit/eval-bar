@@ -101,6 +101,8 @@ export interface ShareState {
   tournamentId: string;
   roundId: string;
   customizations: BarCustomizations;
+  /** When set, the broadcast view only shows games involving these players. */
+  players?: string[];
 }
 
 export type SelectionMode = "all" | "games" | "player";

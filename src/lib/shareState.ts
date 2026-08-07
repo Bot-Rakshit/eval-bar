@@ -37,10 +37,32 @@ export function decodeShareState(encoded: string): ShareState | null {
 
   const rawCustomizations = (parsed.customizations ?? parsed.customStyles ?? {}) as Record<string, unknown>;
 
+  // Legacy v1 links stored exact game pairings as "White-vs-Black" IDs —
+  // migrate them to player names so the filter survives round advances.
+  let players: string[] | undefined;
+  const names = new Set<string>();
+  if (Array.isArray(parsed.gameIDs)) {
+    for (const gameId of parsed.gameIDs) {
+      if (typeof gameId !== "string") continue;
+      const [white, black] = gameId.split("-vs-");
+      if (white) names.add(white);
+      if (black) names.add(black);
+    }
+  }
+  if (Array.isArray(parsed.players)) {
+    for (const player of parsed.players) {
+      if (typeof player === "string") names.add(player);
+    }
+  }
+  if (names.size > 0) {
+    players = Array.from(names);
+  }
+
   return {
     version: 2,
     tournamentId,
     roundId,
     customizations: mergeCustomizations(normalizeCustomizationKeys(rawCustomizations)),
+    players,
   };
 }

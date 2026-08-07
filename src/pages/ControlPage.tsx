@@ -45,7 +45,7 @@ const MODE_LABELS: Array<{ mode: SelectionMode; label: string }> = [
 export default function ControlPage() {
   const [tournament, setTournament] = useState<TournamentSelection | null>(null);
   const [roundName, setRoundName] = useState("");
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>("all");
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("games");
   const [followedPlayers, setFollowedPlayers] = useState<string[]>([]);
   const [manualKeys, setManualKeys] = useState<string[]>([]);
   const [chipSelection, setChipSelection] = useState<string[]>([]);
@@ -132,7 +132,7 @@ export default function ControlPage() {
   const handleTournamentSelect = (selection: TournamentSelection) => {
     setTournament(selection);
     setShowExample(false);
-    setSelectionMode("all");
+    setSelectionMode("games");
     setFollowedPlayers([]);
     setManualKeys([]);
     setChipSelection([]);
@@ -140,7 +140,7 @@ export default function ControlPage() {
 
   const resetTournament = () => {
     setTournament(null);
-    setSelectionMode("all");
+    setSelectionMode("games");
     setFollowedPlayers([]);
     setManualKeys([]);
     setChipSelection([]);
@@ -164,12 +164,29 @@ export default function ControlPage() {
     setManualKeys((previous) => previous.filter((k) => k !== key));
   };
 
+  // The link carries players rather than exact pairings so the broadcast view
+  // keeps showing the right boards after a round advance (colors may flip).
+  const linkPlayers = useMemo((): string[] => {
+    if (selectionMode === "player") return followedPlayers;
+    if (selectionMode === "games") {
+      const names = new Set<string>();
+      for (const key of manualKeys) {
+        const [white, black] = key.split(" - ");
+        if (white) names.add(white);
+        if (black) names.add(black);
+      }
+      return Array.from(names);
+    }
+    return [];
+  }, [selectionMode, followedPlayers, manualKeys]);
+
   const broadcastPath = tournament
     ? `/broadcast/${encodeShareState({
         version: 2,
         tournamentId: tournament.tournamentId,
         roundId: tournament.roundId,
         customizations,
+        players: linkPlayers.length > 0 ? linkPlayers : undefined,
       })}`
     : null;
 
@@ -254,7 +271,7 @@ export default function ControlPage() {
               )}
               {selectionMode === "games" && (
                 <p className="control-hint">
-                  Hand-picked boards only — stays on this round.
+                  Hand-picked boards — the broadcast view follows these players into new rounds.
                 </p>
               )}
               {selectionMode === "player" && (

@@ -49,7 +49,21 @@ export default function ViewPage() {
   }, [shareState]);
 
   const { snapshots } = useRoundStream(shareState?.roundId ?? null);
-  const { games } = useTrackedGames(snapshots, null);
+
+  // Links may restrict the overlay to specific players (selected games or
+  // followed players from the control page). Player-based filtering survives
+  // round advances, including reversed colors.
+  const selectedKeys = useMemo((): string[] | null => {
+    const players = shareState?.players;
+    if (!shareState || !players || players.length === 0) return null;
+    return Array.from(snapshots.keys()).filter((key) =>
+      players.some(
+        (player) => key.startsWith(`${player} - `) || key.endsWith(` - ${player}`)
+      )
+    );
+  }, [snapshots, shareState]);
+
+  const { games } = useTrackedGames(snapshots, selectedKeys);
 
   const handleRoundAdvance = useCallback(
     (nextRound: RoundInfo) => {

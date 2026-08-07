@@ -20,6 +20,7 @@ describe("decodeShareState", () => {
     expect(state!.customizations.hideFinished).toBe(false);
     expect(state!.customizations.layoutDirection).toBe("row");
     expect(state!.customizations.showRoundName).toBe(false);
+    expect(state!.players).toEqual(["So, Wesley", "Caruana, Fabiano"]);
   });
 
   it("round-trips v2 state", () => {
@@ -28,9 +29,22 @@ describe("decodeShareState", () => {
       tournamentId: "abc",
       roundId: "def",
       customizations: { ...DEFAULT_CUSTOMIZATIONS, barWidth: 20, showClocks: false },
+      players: ["Carlsen, Magnus", "Nepomniachtchi, Ian"],
     };
     const decoded = decodeShareState(encodeShareState(original));
     expect(decoded).toEqual(original);
+  });
+
+  it("omits players when not set", () => {
+    const decoded = decodeShareState(
+      encodeShareState({
+        version: 2,
+        tournamentId: "abc",
+        roundId: "def",
+        customizations: DEFAULT_CUSTOMIZATIONS,
+      })
+    );
+    expect(decoded!.players).toBeUndefined();
   });
 
   it("rejects garbage", () => {
