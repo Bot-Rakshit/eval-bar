@@ -182,6 +182,7 @@ const SelectIndicator = styled.span<{ selected: boolean }>`
 export interface TournamentSelection {
   tournamentId: string;
   roundId: string;
+  tournamentName?: string;
 }
 
 interface TournamentsListProps {
@@ -221,7 +222,7 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
     const round = pickCurrentRound(tournament.rounds);
     if (!round) return;
     setSelectedTournamentId(tournament.id);
-    onSelect({ tournamentId: tournament.id, roundId: round.id });
+    onSelect({ tournamentId: tournament.id, roundId: round.id, tournamentName: tournament.name });
   };
 
   const selectCustomUrl = () => {

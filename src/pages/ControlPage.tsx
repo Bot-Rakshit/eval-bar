@@ -3,18 +3,14 @@ import { useNavigate } from "react-router-dom";
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import {
-  BarCustomizations,
-  DEFAULT_CUSTOMIZATIONS,
-  GameSnapshot,
-  RoundInfo,
-  SelectionMode,
-} from "../types";
+import { BarCustomizations, GameSnapshot, RoundInfo, SelectionMode } from "../types";
 import { useRoundStream } from "../hooks/useRoundStream";
 import { useRoundMonitor } from "../hooks/useRoundMonitor";
 import { useTrackedGames } from "../hooks/useTrackedGames";
 import { encodeShareState } from "../lib/shareState";
+import { loadStoredCustomizations, storeCustomizations } from "../lib/storage";
 import { getStockfishEngine } from "../lib/stockfishEngine";
+import { fetchTournamentRounds } from "../api/lichess";
 import TournamentsList, { TournamentSelection } from "../components/TournamentsList";
 import CustomizePanel from "../components/CustomizePanel";
 import EvalBarGrid from "../components/EvalBarGrid";
@@ -40,22 +36,54 @@ const EXAMPLE_SNAPSHOT: GameSnapshot = {
 const EXAMPLE_SNAPSHOTS = new Map<string, GameSnapshot>([[EXAMPLE_SNAPSHOT.key, EXAMPLE_SNAPSHOT]]);
 const EMPTY_SNAPSHOTS = new Map<string, GameSnapshot>();
 
+const MODE_LABELS: Array<{ mode: SelectionMode; label: string }> = [
+  { mode: "all", label: "All Games" },
+  { mode: "games", label: "Select Games" },
+  { mode: "player", label: "Follow Players" },
+];
+
 export default function ControlPage() {
   const [tournament, setTournament] = useState<TournamentSelection | null>(null);
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>("games");
-  const [followedPlayer, setFollowedPlayer] = useState("");
-  const [followAll, setFollowAll] = useState(false);
+  const [roundName, setRoundName] = useState("");
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("all");
+  const [followedPlayers, setFollowedPlayers] = useState<string[]>([]);
   const [manualKeys, setManualKeys] = useState<string[]>([]);
   const [chipSelection, setChipSelection] = useState<string[]>([]);
   const [showExample, setShowExample] = useState(false);
-  const [customizations, setCustomizations] = useState<BarCustomizations>({ ...DEFAULT_CUSTOMIZATIONS });
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [customizations, setCustomizations] = useState<BarCustomizations>(loadStoredCustomizations);
   const navigate = useNavigate();
 
   useEffect(() => {
     void getStockfishEngine().init();
   }, []);
 
-  const { snapshots: streamSnapshots } = useRoundStream(tournament?.roundId ?? null);
+  useEffect(() => {
+    storeCustomizations(customizations);
+  }, [customizations]);
+
+  // Resolve the human-readable round name for the status row
+  useEffect(() => {
+    if (!tournament) {
+      setRoundName("");
+      return;
+    }
+    let cancelled = false;
+    fetchTournamentRounds(tournament.tournamentId)
+      .then((rounds) => {
+        if (cancelled) return;
+        const round = rounds.find((r) => r.id === tournament.roundId);
+        setRoundName(round?.name ?? "");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [tournament]);
+
+  const { snapshots: streamSnapshots, mode: streamMode } = useRoundStream(
+    tournament?.roundId ?? null
+  );
   const snapshots =
     showExample && !tournament ? EXAMPLE_SNAPSHOTS : tournament ? streamSnapshots : EMPTY_SNAPSHOTS;
 
@@ -68,33 +96,35 @@ export default function ControlPage() {
     return Array.from(names).sort();
   }, [snapshots]);
 
-  const followModeActive = selectionMode === "player" && (followedPlayer !== "" || followAll);
-
   const selectedKeys = useMemo((): string[] | null => {
     if (showExample && !tournament) return [EXAMPLE_SNAPSHOT.key];
+    if (selectionMode === "all") return null;
     if (selectionMode === "player") {
-      if (followAll) return null;
-      if (!followedPlayer) return [];
-      const key = Array.from(snapshots.keys()).find(
-        (candidate) =>
-          candidate.startsWith(`${followedPlayer} - `) || candidate.endsWith(` - ${followedPlayer}`)
+      if (followedPlayers.length === 0) return [];
+      return Array.from(snapshots.keys()).filter((key) =>
+        followedPlayers.some(
+          (player) => key.startsWith(`${player} - `) || key.endsWith(` - ${player}`)
+        )
       );
-      return key ? [key] : [];
     }
     return manualKeys;
-  }, [showExample, tournament, selectionMode, followAll, followedPlayer, snapshots, manualKeys]);
+  }, [showExample, tournament, selectionMode, followedPlayers, snapshots, manualKeys]);
 
   const { games, triggerDemoBlunder } = useTrackedGames(snapshots, selectedKeys);
 
+  // Auto-advance rounds unless the user pinned specific games
+  const autoAdvanceActive =
+    tournament !== null &&
+    (selectionMode === "all" || (selectionMode === "player" && followedPlayers.length > 0));
+
   const handleRoundAdvance = useCallback((nextRound: RoundInfo) => {
-    setTournament((current) =>
-      current ? { tournamentId: current.tournamentId, roundId: nextRound.id } : current
-    );
+    setTournament((current) => (current ? { ...current, roundId: nextRound.id } : current));
     setChipSelection([]);
+    setManualKeys([]);
   }, []);
 
   useRoundMonitor(
-    tournament && followModeActive ? tournament.tournamentId : null,
+    autoAdvanceActive && tournament ? tournament.tournamentId : null,
     tournament?.roundId ?? null,
     handleRoundAdvance
   );
@@ -102,9 +132,16 @@ export default function ControlPage() {
   const handleTournamentSelect = (selection: TournamentSelection) => {
     setTournament(selection);
     setShowExample(false);
-    setSelectionMode("games");
-    setFollowedPlayer("");
-    setFollowAll(false);
+    setSelectionMode("all");
+    setFollowedPlayers([]);
+    setManualKeys([]);
+    setChipSelection([]);
+  };
+
+  const resetTournament = () => {
+    setTournament(null);
+    setSelectionMode("all");
+    setFollowedPlayers([]);
     setManualKeys([]);
     setChipSelection([]);
   };
@@ -127,31 +164,33 @@ export default function ControlPage() {
     setManualKeys((previous) => previous.filter((k) => k !== key));
   };
 
-  const resetTournament = () => {
-    setTournament(null);
-    setSelectionMode("games");
-    setFollowedPlayer("");
-    setFollowAll(false);
-    setManualKeys([]);
-    setChipSelection([]);
+  const broadcastPath = tournament
+    ? `/broadcast/${encodeShareState({
+        version: 2,
+        tournamentId: tournament.tournamentId,
+        roundId: tournament.roundId,
+        customizations,
+      })}`
+    : null;
+
+  const copyBroadcastLink = () => {
+    if (!broadcastPath) return;
+    navigator.clipboard
+      .writeText(`${window.location.origin}${broadcastPath}`)
+      .then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2500);
+      })
+      .catch(() => alert("Could not copy — copy the URL from the browser after opening the view."));
   };
 
-  const handleGenerateLink = () => {
-    if (!tournament) return;
-    const encoded = encodeShareState({
-      version: 2,
-      tournamentId: tournament.tournamentId,
-      roundId: tournament.roundId,
-      customizations,
-    });
-    navigate(`/broadcast/${encoded}`);
-    navigator.clipboard
-      .writeText(`${window.location.origin}/broadcast/${encoded}`)
-      .then(() => alert("Link copied to clipboard!"))
-      .catch(() => {});
+  const openBroadcastView = () => {
+    if (broadcastPath) navigate(broadcastPath);
   };
 
   const availableGameKeys = Array.from(snapshots.keys());
+  const streamStatusLabel =
+    streamMode === "stream" ? "Live" : streamMode === "poll" ? "Polling" : "Connecting…";
 
   return (
     <ThemeProvider theme={theme}>
@@ -182,83 +221,78 @@ export default function ControlPage() {
           </>
         ) : (
           <div className="control-panel">
-            <div className="control-section">
-              <span className="control-label">Selection mode</span>
-              <div className="mode-toggle">
-                <button
-                  type="button"
-                  className={selectionMode === "games" ? "mode-btn active" : "mode-btn"}
-                  onClick={() => setSelectionMode("games")}
-                >
-                  Select Games
-                </button>
-                <button
-                  type="button"
-                  className={selectionMode === "player" ? "mode-btn active" : "mode-btn"}
-                  onClick={() => setSelectionMode("player")}
-                >
-                  Follow Player
-                </button>
-              </div>
+            <div className="status-row">
+              <span className={`status-dot ${streamMode === "stream" ? "live" : ""}`} />
+              <span className="status-text">
+                <strong>{tournament.tournamentName ?? "Custom broadcast"}</strong>
+                {roundName ? ` — ${roundName}` : ""} · {games.length}{" "}
+                {games.length === 1 ? "game" : "games"} · {streamStatusLabel}
+              </span>
+              <button type="button" className="action-btn status-change-btn" onClick={resetTournament}>
+                Change Tournament
+              </button>
             </div>
 
-            {selectionMode === "player" ? (
+            <div className="control-section">
+              <span className="control-label">Games to show</span>
+              <div className="mode-toggle">
+                {MODE_LABELS.map(({ mode, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={selectionMode === mode ? "mode-btn active" : "mode-btn"}
+                    onClick={() => setSelectionMode(mode)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {selectionMode === "all" && (
+                <p className="control-hint">
+                  Every board in the round, and the next round starts automatically.
+                </p>
+              )}
+              {selectionMode === "games" && (
+                <p className="control-hint">
+                  Hand-picked boards only — stays on this round.
+                </p>
+              )}
+              {selectionMode === "player" && (
+                <p className="control-hint">
+                  Follows the selected players into every new round automatically.
+                </p>
+              )}
+            </div>
+
+            {selectionMode === "player" && (
               <div className="control-section">
-                <span className="control-label">Follow</span>
+                <span className="control-label">Players</span>
                 <Autocomplete
                   className="follow-input"
+                  multiple
                   freeSolo
                   options={players}
-                  value={followedPlayer}
-                  onInputChange={(_, newValue) => setFollowedPlayer(newValue)}
+                  value={followedPlayers}
+                  onChange={(_, value) => setFollowedPlayers(value as string[])}
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="Follow a player"
+                      label="Follow players"
                       variant="outlined"
                       size="small"
-                      placeholder="Search or type a player name"
+                      placeholder="Search or type player names"
                     />
                   )}
                 />
-                <div className="follow-row">
-                  <button
-                    type="button"
-                    className={followAll ? "action-btn primary" : "action-btn"}
-                    onClick={() => {
-                      setFollowAll((value) => !value);
-                      if (!followAll) setFollowedPlayer("");
-                    }}
-                  >
-                    Follow All Games
-                  </button>
-                  {followedPlayer && !followAll && (
-                    <button
-                      type="button"
-                      className="action-btn"
-                      onClick={() => setFollowedPlayer("")}
-                    >
-                      Stop Following
-                    </button>
-                  )}
-                  {followAll && (
-                    <button
-                      type="button"
-                      className="action-btn"
-                      onClick={() => setFollowAll(false)}
-                    >
-                      Stop Following All
-                    </button>
-                  )}
-                  {followModeActive && games.length === 0 && (
-                    <span className="follow-hint">
-                      Waiting for {followAll ? "the next round's games" : `${followedPlayer}'s game`} to
-                      appear...
-                    </span>
-                  )}
-                </div>
+                {followedPlayers.length > 0 && games.length === 0 && (
+                  <div className="follow-row">
+                    <span className="follow-hint">Waiting for their games to appear…</span>
+                  </div>
+                )}
               </div>
-            ) : (
+            )}
+
+            {selectionMode === "games" && (
               <div className="control-section">
                 <span className="control-label">Games in this round</span>
                 {availableGameKeys.length > 0 ? (
@@ -297,18 +331,14 @@ export default function ControlPage() {
                   Add Selected Games
                 </button>
               )}
-              <button type="button" className="action-btn primary" onClick={handleGenerateLink}>
-                Create Unique Link
+              <button type="button" className="action-btn primary" onClick={copyBroadcastLink}>
+                {linkCopied ? "Copied!" : "Copy Broadcast Link"}
+              </button>
+              <button type="button" className="action-btn" onClick={openBroadcastView}>
+                Open Broadcast View
               </button>
               <button type="button" className="action-btn" onClick={triggerDemoBlunder}>
                 Demo Blunder
-              </button>
-              <button
-                type="button"
-                className="action-btn"
-                onClick={resetTournament}
-              >
-                Change Tournament
               </button>
               <CustomizePanel customizations={customizations} onChange={setCustomizations} />
             </div>

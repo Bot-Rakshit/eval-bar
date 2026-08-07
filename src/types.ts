@@ -54,6 +54,8 @@ export interface BarCustomizations {
   barHeight: number;
   showClocks: boolean;
   showMoveNumber: boolean;
+  sortByEval: boolean;
+  hideFinished: boolean;
 }
 
 export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
@@ -71,7 +73,24 @@ export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
   barHeight: 24,
   showClocks: true,
   showMoveNumber: true,
+  sortByEval: false,
+  hideFinished: false,
 };
+
+/**
+ * Merge unknown values into a full customizations object, keeping only
+ * keys that exist in the defaults with a matching type.
+ */
+export function mergeCustomizations(partial: Record<string, unknown> | null | undefined): BarCustomizations {
+  const merged = { ...DEFAULT_CUSTOMIZATIONS };
+  for (const [key, value] of Object.entries(partial ?? {})) {
+    const target = key as keyof BarCustomizations;
+    if (target in merged && typeof value === typeof merged[target]) {
+      (merged[target] as unknown) = value;
+    }
+  }
+  return merged;
+}
 
 export interface ShareState {
   version: 2;
@@ -80,7 +99,7 @@ export interface ShareState {
   customizations: BarCustomizations;
 }
 
-export type SelectionMode = "games" | "player";
+export type SelectionMode = "all" | "games" | "player";
 
 export function makeGameKey(whitePlayer: string, blackPlayer: string): string {
   return `${whitePlayer} - ${blackPlayer}`;

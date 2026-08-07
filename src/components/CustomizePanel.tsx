@@ -2,7 +2,7 @@ import { ChangeEvent, useRef, useState } from "react";
 import { MuiColorInput } from "mui-color-input";
 import Slider from "@mui/material/Slider";
 import Switch from "@mui/material/Switch";
-import { BarCustomizations, DEFAULT_CUSTOMIZATIONS } from "../types";
+import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, mergeCustomizations } from "../types";
 
 interface CustomizePanelProps {
   customizations: BarCustomizations;
@@ -65,15 +65,8 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const imported = JSON.parse(String(reader.result)) as Partial<BarCustomizations>;
-        const merged = { ...DEFAULT_CUSTOMIZATIONS };
-        for (const key of Object.keys(merged) as Array<keyof BarCustomizations>) {
-          const value = imported[key];
-          if (value !== undefined && typeof value === typeof merged[key]) {
-            (merged[key] as unknown) = value;
-          }
-        }
-        onChange(merged);
+        const imported = JSON.parse(String(reader.result)) as Record<string, unknown>;
+        onChange(mergeCustomizations(imported));
       } catch {
         console.error("Invalid theme file");
       }
@@ -172,6 +165,22 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
                   size="small"
                   checked={customizations.showMoveNumber}
                   onChange={(_, checked) => patch({ showMoveNumber: checked })}
+                />
+              </div>
+              <div className="customize-field customize-toggle">
+                <span className="customize-field-label">Sort by evaluation</span>
+                <Switch
+                  size="small"
+                  checked={customizations.sortByEval}
+                  onChange={(_, checked) => patch({ sortByEval: checked })}
+                />
+              </div>
+              <div className="customize-field customize-toggle">
+                <span className="customize-field-label">Hide finished games</span>
+                <Switch
+                  size="small"
+                  checked={customizations.hideFinished}
+                  onChange={(_, checked) => patch({ hideFinished: checked })}
                 />
               </div>
             </div>

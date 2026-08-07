@@ -1,27 +1,20 @@
-import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, ShareState } from "../types";
+import { BarCustomizations, mergeCustomizations, ShareState } from "../types";
 
+/** Old (v1) links used different customization key names — map them across. */
 const LEGACY_KEY_MAP: Record<string, keyof BarCustomizations> = {
   evalContainerBg: "containerBackground",
-  containerBorderColor: "containerBorderColor",
   evalContainerBorderColor: "containerBorderColor",
-  whiteBarColor: "whiteBarColor",
-  blackBarColor: "blackBarColor",
   whitePlayerColor: "whitePlayerBackground",
   blackPlayerColor: "blackPlayerBackground",
-  whitePlayerNameColor: "whitePlayerNameColor",
-  blackPlayerNameColor: "blackPlayerNameColor",
   moveIndicatorArrowColor: "turnArrowColor",
 };
 
-function migrateLegacyCustomizations(legacy: Record<string, unknown>): BarCustomizations {
-  const customizations = { ...DEFAULT_CUSTOMIZATIONS };
-  for (const [legacyKey, value] of Object.entries(legacy ?? {})) {
-    const targetKey = LEGACY_KEY_MAP[legacyKey] ?? (legacyKey as keyof BarCustomizations);
-    if (targetKey in customizations && typeof value === typeof customizations[targetKey]) {
-      (customizations[targetKey] as unknown) = value;
-    }
+function normalizeCustomizationKeys(raw: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw ?? {})) {
+    normalized[LEGACY_KEY_MAP[key] ?? key] = value;
   }
-  return customizations;
+  return normalized;
 }
 
 export function encodeShareState(state: ShareState): string {
@@ -48,6 +41,6 @@ export function decodeShareState(encoded: string): ShareState | null {
     version: 2,
     tournamentId,
     roundId,
-    customizations: migrateLegacyCustomizations(rawCustomizations),
+    customizations: mergeCustomizations(normalizeCustomizationKeys(rawCustomizations)),
   };
 }

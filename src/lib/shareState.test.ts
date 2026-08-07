@@ -16,6 +16,8 @@ describe("decodeShareState", () => {
     expect(state!.customizations.turnArrowColor).toBe("#FFA500");
     expect(state!.customizations.barWidth).toBe(DEFAULT_CUSTOMIZATIONS.barWidth);
     expect(state!.customizations.showClocks).toBe(true);
+    expect(state!.customizations.sortByEval).toBe(false);
+    expect(state!.customizations.hideFinished).toBe(false);
   });
 
   it("round-trips v2 state", () => {
