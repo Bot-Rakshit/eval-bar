@@ -1,14 +1,4 @@
-import React, { useEffect } from 'react';
-import './LandingPage.css';
-
-function LandingPage() {
-  useEffect(() => {
-    document.body.classList.add('landing-page');
-    return () => {
-      document.body.classList.remove('landing-page');
-    };
-  }, []);
-
+export default function LandingPage() {
   return (
     <div className="landing-container">
       <header className="landing-header">
@@ -17,33 +7,31 @@ function LandingPage() {
         </span>
         <span className="landing-sub">ChessBase India Broadcast Tool</span>
       </header>
-      <main>
-        <section className="intro">
+      <main className="landing-main">
+        <section className="landing-intro">
           <h1>Broadcast Manager</h1>
           <p>Enhance your chess broadcasts with cutting-edge features.</p>
         </section>
 
-        <section className="products">
-          <a href="evalbars" className="product">
+        <section className="landing-products">
+          <a href="evalbars" className="landing-product">
             <h2>Evaluation Bars</h2>
             <p>Visualize game dynamics with multiple evaluation bars.</p>
           </a>
-          <a href="ccm" className="product">
+          <a href="ccm" className="landing-product">
             <h2>Chat Chess Moves</h2>
             <p>Engage your audience with interactive chess puzzles in the chat.</p>
           </a>
-          <a href="messagedisplay" className="product">
+          <a href="messagedisplay" className="landing-product">
             <h2>Display Messages in Broadcast</h2>
             <p>Feature live chat messages directly in your stream.</p>
           </a>
         </section>
       </main>
 
-      <footer>
+      <footer className="landing-footer">
         <p>© ChessBase India</p>
       </footer>
     </div>
   );
 }
-
-export default LandingPage;

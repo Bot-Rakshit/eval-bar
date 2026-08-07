@@ -1,0 +1,463 @@
+:root {
+  --accent: #E79D29;
+  --accent-strong: #f2b04a;
+  --accent-soft: rgba(231, 157, 41, 0.16);
+  --text: #f4f4f5;
+  --text-muted: #9b9ba1;
+  --panel-bg: rgba(255, 255, 255, 0.045);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --field-bg: rgba(0, 0, 0, 0.35);
+  --radius: 14px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --app-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  font-family: var(--app-font);
+  overflow: auto;
+  color: var(--text);
+}
+
+/* Dark by default; chroma-key green only on the final broadcast screen */
+body {
+  background-color: #0b0b0d;
+}
+
+body.chroma-view {
+  background-color: rgb(21, 185, 81);
+}
+
+.page-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 32px;
+  box-sizing: border-box;
+}
+
+/* ---------- Header ---------- */
+
+.app-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 30px 16px 2px;
+}
+
+.app-wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--text);
+}
+
+.app-wordmark-accent {
+  color: var(--accent);
+}
+
+.app-sub {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------- Control panel ---------- */
+
+.control-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin: 22px auto;
+  max-width: 980px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.control-section + .control-section {
+  margin-top: 20px;
+}
+
+.control-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.control-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 4px 0;
+}
+
+/* Segmented selection-mode toggle */
+.mode-toggle {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+
+.mode-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.mode-btn:active {
+  transform: scale(0.97);
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #161616;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mode-btn:not(.active):hover {
+    color: var(--text);
+  }
+}
+
+/* Game chips */
+.game-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-chip {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.game-chip:active {
+  transform: scale(0.97);
+}
+
+.game-chip.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.game-chip.tracked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #161616;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game-chip:hover {
+    border-color: var(--accent);
+  }
+}
+
+/* Action buttons */
+.control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.control-actions-flush {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.action-btn {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--field-bg);
+  border: 1px solid var(--panel-border);
+  transition: background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.action-btn:active {
+  transform: scale(0.97);
+}
+
+.action-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #161616;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .action-btn:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+
+  .action-btn.primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+  }
+}
+
+/* Follow mode */
+.follow-input {
+  max-width: 380px;
+}
+
+.follow-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.follow-hint {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+/* ---------- Customize panel ---------- */
+
+.customize-panel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 100%;
+}
+
+.customize-content {
+  width: 100%;
+  margin-top: 6px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: var(--field-bg);
+  box-sizing: border-box;
+}
+
+.customize-section + .customize-section {
+  margin-top: 16px;
+}
+
+.customize-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.customize-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customize-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.customize-toggle {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+/* ---------- Eval bars layout ---------- */
+
+.eval-bars-container {
+  width: 100%;
+  padding: 20px 16px 30px;
+  box-sizing: border-box;
+}
+
+.eval-bars-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Blunder alert pulse (used by EvalBar) */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---------- Landing page ---------- */
+
+.landing-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.landing-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 16px 8px;
+}
+
+.landing-wordmark {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  color: var(--text);
+}
+
+.landing-wordmark-accent {
+  color: var(--accent);
+}
+
+.landing-sub {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.landing-main {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.landing-intro h1 {
+  text-align: center;
+  margin: 24px 0 8px;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.landing-intro p {
+  text-align: center;
+  margin: 0 0 32px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.landing-products {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.landing-product {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 22px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.landing-product:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-product:hover {
+    border-color: var(--accent);
+  }
+}
+
+.landing-product h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.landing-product p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.landing-footer {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .landing-products {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Placeholder pages ---------- */
+
+.placeholder-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.placeholder-page h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.placeholder-page p {
+  color: var(--text-muted);
+  margin: 0;
+}

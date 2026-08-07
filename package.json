@@ -41,6 +41,11 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "moduleNameMapper": {
+      "^chessops/(.*)$": "<rootDir>/node_modules/chessops/dist/cjs/$1.js"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -55,6 +60,10 @@
   },
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.14.5",
-    "tailwindcss": "^3.3.5"
+    "@types/node": "^26.1.2",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^4.9.5"
   }
 }
