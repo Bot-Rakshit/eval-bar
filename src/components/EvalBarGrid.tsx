@@ -22,11 +22,24 @@ export function EvalBarGrid({ games, customizations }: EvalBarGridProps) {
     return list;
   }, [games, customizations.hideFinished, customizations.sortByEval]);
 
+  const isColumn = customizations.layoutDirection === "column";
+
   return (
     <div className="eval-bars-container">
-      <div className="eval-bars-grid" style={{ gap: `${customizations.barGap}px` }}>
+      <div
+        className={isColumn ? "eval-bars-grid column" : "eval-bars-grid"}
+        style={{
+          gap: `${customizations.barGap}px`,
+          ...(isColumn ? { width: `${customizations.barWidth}%` } : {}),
+        }}
+      >
         {visibleGames.map((game) => (
-          <EvalBar key={game.key} game={game} customizations={customizations} />
+          <EvalBar
+            key={game.key}
+            game={game}
+            customizations={customizations}
+            width={isColumn ? "100%" : undefined}
+          />
         ))}
       </div>
     </div>

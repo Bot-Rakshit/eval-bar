@@ -56,6 +56,8 @@ export interface BarCustomizations {
   showMoveNumber: boolean;
   sortByEval: boolean;
   hideFinished: boolean;
+  layoutDirection: "row" | "column";
+  showRoundName: boolean;
 }
 
 export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
@@ -75,6 +77,8 @@ export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
   showMoveNumber: true,
   sortByEval: false,
   hideFinished: false,
+  layoutDirection: "row",
+  showRoundName: false,
 };
 
 /**

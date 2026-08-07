@@ -362,6 +362,31 @@ body.chroma-view {
   width: 100%;
 }
 
+.eval-bars-grid.column {
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 auto;
+}
+
+/* Round name shown on the broadcast overlay */
+.round-label {
+  position: fixed;
+  top: 10px;
+  left: 14px;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  z-index: 10;
+}
+
+/* Theme preset buttons */
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Blunder alert pulse (used by EvalBar) */
 @keyframes pulse {
   0% {

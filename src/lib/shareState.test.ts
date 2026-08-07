@@ -18,6 +18,8 @@ describe("decodeShareState", () => {
     expect(state!.customizations.showClocks).toBe(true);
     expect(state!.customizations.sortByEval).toBe(false);
     expect(state!.customizations.hideFinished).toBe(false);
+    expect(state!.customizations.layoutDirection).toBe("row");
+    expect(state!.customizations.showRoundName).toBe(false);
   });
 
   it("round-trips v2 state", () => {

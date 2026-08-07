@@ -5,6 +5,7 @@ import "./EvalBar.css";
 interface EvalBarProps {
   game: TrackedGame;
   customizations: BarCustomizations;
+  width?: string;
 }
 
 const RESULT_LABELS: Record<string, string> = {
@@ -73,7 +74,7 @@ function formatClock(seconds: number): string {
   return `${hours}:${pad(minutes)}:${pad(secs)}`;
 }
 
-export function EvalBar({ game, customizations }: EvalBarProps) {
+export function EvalBar({ game, customizations, width }: EvalBarProps) {
   const [secondsSinceLastMove, setSecondsSinceLastMove] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -102,7 +103,7 @@ export function EvalBar({ game, customizations }: EvalBarProps) {
     <div
       className={`eval-container ${alert ? "blink-border" : ""}`}
       style={{
-        width: `${customizations.barWidth}%`,
+        width: width ?? `${customizations.barWidth}%`,
         background: customizations.containerBackground,
         border: `1px solid ${customizations.containerBorderColor}`,
       }}
