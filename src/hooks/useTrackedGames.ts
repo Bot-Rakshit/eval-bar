@@ -110,10 +110,16 @@ export function useTrackedGames(
     });
   };
 
-  const selectedKeysKey = selectedKeys ? selectedKeys.join("|") : null;
+  const selectedKeysKey = selectedKeys === null ? null : selectedKeys.join("|");
 
   useEffect(() => {
-    const targetKeys = selectedKeysKey ? selectedKeysKey.split("|") : Array.from(snapshots.keys());
+    // null = all games in the round; empty array = explicitly nothing selected
+    const targetKeys =
+      selectedKeysKey === null
+        ? Array.from(snapshots.keys())
+        : selectedKeysKey === ""
+        ? []
+        : selectedKeysKey.split("|");
 
     for (const key of Array.from(gamesRef.current.keys())) {
       if (!targetKeys.includes(key)) {
