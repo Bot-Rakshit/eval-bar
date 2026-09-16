@@ -37,6 +37,10 @@ body.team-view {
   overflow: hidden;
 }
 
+body.team-view-chroma {
+  background-color: rgb(21, 185, 81);
+}
+
 body.team-view-backdrop {
   background-color: #03203a;
   background-image: url("../assets/olympiad-bg.png");
@@ -72,9 +76,8 @@ body.team-view-backdrop {
   gap: 22px;
   padding: 14px 34px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(4, 30, 56, 0.92), rgba(2, 18, 36, 0.96));
-  border: 1px solid rgba(196, 176, 119, 0.55);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, #06254a, #021428);
+  border: 1px solid #c4b077;
   color: #ffffff;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -104,13 +107,13 @@ body.team-view-backdrop {
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: rgba(243, 234, 208, 0.75);
+  color: #f3ead0;
   padding-left: 14px;
-  border-left: 1px solid rgba(196, 176, 119, 0.5);
+  border-left: 1px solid #c4b077;
 }
 
 .team-waiting {
-  color: rgba(243, 234, 208, 0.85);
+  color: #f3ead0;
   font-weight: 600;
   letter-spacing: 0.06em;
   padding: 10px 20px;
@@ -128,8 +131,21 @@ body.team-view-backdrop {
 
 .team-overlay .eval-container {
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   padding: 4px 6px;
+}
+
+/* Soft shadows only when previewing on the backdrop */
+body.team-view-backdrop .team-header,
+body.team-view-backdrop .eval-container {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Eval number sits over cream or navy depending on the score — outline it so it reads on both */
+.team-overlay .evaluation-value {
+  color: #ffffff !important;
+  -webkit-text-stroke: 1px #021428;
+  paint-order: stroke fill;
+  text-shadow: 0 0 5px rgba(2, 20, 40, 0.95), 0 1px 2px rgba(2, 20, 40, 0.95);
 }
 
 .team-overlay .white-player,
@@ -160,8 +176,10 @@ body.team-view-backdrop {
   font-size: 0.8rem;
 }
 
+.team-overlay .placeholder-bar .white-player,
+.team-overlay .placeholder-bar .black-player,
 .placeholder-muted {
-  color: rgba(243, 234, 208, 0.55);
+  color: #f3ead0;
 }
 
 .placeholder-eval {
@@ -178,18 +196,17 @@ body.team-view-backdrop {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(243, 234, 208, 0.6);
+  color: #f3ead0;
   margin-bottom: 4px;
 }
 
 .placeholder-bar .white-bar {
-  opacity: 0.55;
   animation: placeholder-breathe 2.4s ease-in-out infinite;
 }
 
 @keyframes placeholder-breathe {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.7; }
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 .team-overlay .team-player {

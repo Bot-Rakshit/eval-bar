@@ -19,8 +19,9 @@ const SECTIONS: Record<string, { prefix: string; label: string }> = {
 /** Tuned for the navy/gold Olympiad backdrop the bars sit on. */
 const OLYMPIAD_THEME: BarCustomizations = {
   ...DEFAULT_CUSTOMIZATIONS,
-  containerBackground: "linear-gradient(180deg, rgba(4, 30, 56, 0.92), rgba(2, 18, 36, 0.96))",
-  containerBorderColor: "rgba(196, 176, 119, 0.55)",
+  // Opaque so nothing bleeds through on a chroma key
+  containerBackground: "linear-gradient(180deg, #06254a, #021428)",
+  containerBorderColor: "#c4b077",
   whiteBarColor: "#f3ead0",
   blackBarColor: "#0b1c30",
   whitePlayerBackground: "Transparent",
@@ -114,7 +115,9 @@ export default function TeamPage() {
   const [params] = useSearchParams();
   const sectionInfo = SECTIONS[section.toLowerCase()] ?? SECTIONS.open;
   const team = params.get("team")?.trim() || DEFAULT_TEAM;
-  const showBackdrop = params.get("bg") === "1";
+  // Default is chroma green for keying; ?bg=1 previews on the Olympiad backdrop,
+  // ?bg=transparent relies on OBS browser-source alpha instead.
+  const bgMode = params.get("bg") === "1" ? "backdrop" : params.get("bg") === "transparent" ? "transparent" : "chroma";
   const align = params.get("align") ?? "center";
   const scale = Number(params.get("scale")) || 1.6;
   // Any tour id inside another team event's broadcast group works here
@@ -125,11 +128,12 @@ export default function TeamPage() {
 
   useEffect(() => {
     document.body.classList.add("team-view");
-    document.body.classList.toggle("team-view-backdrop", showBackdrop);
+    document.body.classList.toggle("team-view-backdrop", bgMode === "backdrop");
+    document.body.classList.toggle("team-view-chroma", bgMode === "chroma");
     return () => {
-      document.body.classList.remove("team-view", "team-view-backdrop");
+      document.body.classList.remove("team-view", "team-view-backdrop", "team-view-chroma");
     };
-  }, [showBackdrop]);
+  }, [bgMode]);
 
   // Prefer PGN team tags; fall back to the names discovered from the round API.
   const selectedKeys = useMemo((): string[] => {

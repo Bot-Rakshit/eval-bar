@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetchBroadcastGroup, fetchRoundGames, fetchTournamentRounds } from "../api/lichess";
 import { RoundInfo } from "../types";
 
-const DISCOVERY_INTERVAL_MS = 30000;
+const DISCOVERY_INTERVAL_MS = 60000;
 const GROUP_REFRESH_MS = 10 * 60 * 1000;
 
 /** Where a team is playing right now: which section broadcast, which round. */
@@ -44,6 +44,8 @@ export function useTeamRound(
 ): { target: TeamRoundTarget | null; error: string | null } {
   const [target, setTarget] = useState<TeamRoundTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const targetRef = useRef<TeamRoundTarget | null>(null);
+  targetRef.current = target;
   const toursRef = useRef<{ fetchedAt: number; tours: Array<{ id: string; name: string }> } | null>(null);
 
   useEffect(() => {
@@ -62,6 +64,18 @@ export function useTeamRound(
 
     const discover = async () => {
       try {
+        // While the round we're on is still ongoing nothing can change — one
+        // cheap request instead of scanning every section (Lichess rate limits).
+        const current = targetRef.current;
+        if (current) {
+          const rounds = await fetchTournamentRounds(current.tourId).catch(() => [] as RoundInfo[]);
+          if (rounds.find((round) => round.id === current.roundId)?.ongoing) {
+            setError(null);
+            if (!cancelled) timer = setTimeout(() => void discover(), DISCOVERY_INTERVAL_MS);
+            return;
+          }
+        }
+
         const tours = await loadTours();
         const now = Date.now();
         let found: TeamRoundTarget | null = null;
