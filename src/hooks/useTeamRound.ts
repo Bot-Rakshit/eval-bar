@@ -49,6 +49,7 @@ export function useTeamRound(
   const toursRef = useRef<{ fetchedAt: number; tours: Array<{ id: string; name: string }> } | null>(null);
 
   useEffect(() => {
+    if (!anchorTourId) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 

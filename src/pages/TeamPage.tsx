@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, TrackedGame } from "../types";
 import { useRoundStream } from "../hooks/useRoundStream";
 import { useTeamRound, teamMatches } from "../hooks/useTeamRound";
 import { useTrackedGames } from "../hooks/useTrackedGames";
 import EvalBarGrid from "../components/EvalBarGrid";
+import { ActiveMoment, useMoments } from "../hooks/useMoments";
+import { projectedScore } from "../lib/intel/moments";
+import { DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
 
 /** Any tour in the Olympiad group — the group lists every section. */
 const OLYMPIAD_ANCHOR_TOUR = "n1pPI5Q0";
@@ -117,6 +120,59 @@ function PlaceholderBars({
   );
 }
 
+/** ?demo=1 — scripted boards cycling through every callout, for previewing the look. */
+function useDemo(team: string, enabled: boolean): { games: TrackedGame[]; active: ActiveMoment | null } {
+  const games = useMemo(() => (enabled ? demoGames(team) : []), [team, enabled]);
+  const [step, setStep] = useState(-1);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let index = 0;
+    const cycle = () => {
+      setStep(index);
+      setVisible(true);
+      timer = setTimeout(() => {
+        setVisible(false);
+        index = (index + 1) % DEMO_SCRIPT.length;
+        timer = setTimeout(cycle, 2500); // bars back on screen between callouts
+      }, 4500);
+    };
+    timer = setTimeout(cycle, 1500);
+    return () => clearTimeout(timer);
+  }, [enabled]);
+
+  const active = useMemo((): ActiveMoment | null => {
+    if (!enabled || !visible || step < 0) return null;
+    const current = DEMO_SCRIPT[step];
+    return { moment: demoMoment(current, step), game: games[current.boardIndex] };
+  }, [enabled, visible, step, games]);
+
+  return { games, active };
+}
+
+/** Step the type down for long lines so a 12-letter surname still fits on one line. */
+function headlineSize(text: string): string {
+  if (text.length > 26) return "size-s";
+  if (text.length > 20) return "size-m";
+  return "";
+}
+
+/** Full-width headline that takes over the bar strip for a few seconds. */
+function MomentTakeover({ active }: { active: ActiveMoment }) {
+  const { moment } = active;
+  return (
+    <div
+      key={moment.id}
+      className={`moment-takeover tone-${moment.tone}`}
+      style={{ "--moment-ms": `${moment.durationMs}ms` } as React.CSSProperties}
+    >
+      <span className={`moment-headline ${headlineSize(moment.text)}`}>{moment.text}</span>
+    </div>
+  );
+}
+
 export default function TeamPage() {
   const { section = "open" } = useParams<{ section: string }>();
   const [params] = useSearchParams();
@@ -127,10 +183,12 @@ export default function TeamPage() {
   const bgMode = params.get("bg") === "1" ? "backdrop" : params.get("bg") === "transparent" ? "transparent" : "chroma";
   const align = params.get("align") ?? "center";
   const scale = Number(params.get("scale")) || 1.6;
+  const demo = params.get("demo") === "1";
+  const momentsEnabled = params.get("moments") !== "0";
   // Any tour id inside another team event's broadcast group works here
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
-  const { target, error } = useTeamRound(anchorTour, sectionInfo.prefix, team);
+  const { target, error } = useTeamRound(demo ? "" : anchorTour, sectionInfo.prefix, team);
   const { snapshots } = useRoundStream(target?.roundId ?? null);
 
   useEffect(() => {
@@ -157,7 +215,11 @@ export default function TeamPage() {
       .map((snapshot) => snapshot.key);
   }, [snapshots, target, team]);
 
-  const { games } = useTrackedGames(snapshots, selectedKeys);
+  const { games: liveGames } = useTrackedGames(snapshots, selectedKeys);
+  const liveActive = useMoments(liveGames, team, momentsEnabled && !demo);
+  const demoState = useDemo(team, demo);
+  const games = demo ? demoState.games : liveGames;
+  const active = demo ? demoState.active : liveActive;
 
   const opponent = useMemo(() => {
     for (const game of games) {
@@ -168,6 +230,7 @@ export default function TeamPage() {
   }, [games, team]);
 
   const score = matchScore(games, team);
+  const projected = momentsEnabled ? projectedScore(games, team) : null;
   const highlight = useMemo(() => ({ team, color: TEAM_COLOR }), [team]);
 
   return (
@@ -189,11 +252,17 @@ export default function TeamPage() {
         )}
         <span className="team-header-meta">
           {sectionInfo.label}
-          {target ? ` · ${target.roundName}` : ""}
+          {target ? ` · ${target.roundName}` : demo ? " · Demo" : ""}
         </span>
+        {projected && opponent && (
+          <span className="team-header-projected">
+            Proj. {formatPoints(projected.us)}–{formatPoints(projected.them)}
+          </span>
+        )}
       </header>
 
-      <div className="team-boards">
+      <div className={active ? "team-boards is-hidden" : "team-boards"}>
+        {active && <MomentTakeover active={active} />}
         {games.length > 0 && (
           <EvalBarGrid games={games} customizations={OLYMPIAD_THEME} highlight={highlight} />
         )}

@@ -112,6 +112,187 @@ body.team-view-backdrop {
   border-left: 1px solid #c4b077;
 }
 
+.team-header-projected {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #021428;
+  background: #F5C95B;
+  padding: 3px 10px;
+  border-radius: 999px;
+  align-self: center;
+}
+
+/* ---------- Moments: a headline takes over the whole bar strip ---------- */
+
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.team-boards {
+  position: relative;
+}
+
+.team-boards .eval-bars-container {
+  transition: opacity 220ms var(--ease-out-strong), transform 220ms var(--ease-out-strong), filter 220ms var(--ease-out-strong);
+}
+
+.team-boards.is-hidden .eval-bars-container {
+  opacity: 0;
+  transform: translateY(6px);
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.moment-takeover {
+  --tone: #f3ead0;
+  --tone-glow: rgba(243, 234, 208, 0.18);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #06254a, #021428);
+  box-shadow: 0 0 0 1px #c4b077;
+  animation:
+    takeover-in 380ms var(--ease-out-strong) 180ms both,
+    takeover-out 260ms var(--ease-in-out-strong) calc(var(--moment-ms, 5000ms) - 260ms) forwards;
+}
+
+/* Soft colour wash behind the type — colour without a loud fill */
+.moment-takeover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 140% at 50% 50%, var(--tone-glow), transparent 70%);
+  animation: glow-in 700ms var(--ease-out-strong) 260ms both;
+}
+
+/* Hairline rules that draw out from the centre */
+.moment-takeover::after {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 9px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tone) 20%, var(--tone) 80%, transparent);
+  transform: scaleX(0);
+  animation: rule-in 520ms var(--ease-out-strong) 320ms both;
+}
+
+.moment-headline {
+  position: relative;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--tone);
+  /* light-to-dark type gradient for a hint of depth, no extrusion */
+  background: linear-gradient(180deg, #ffffff 0%, var(--tone) 62%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+  animation:
+    headline-in 460ms var(--ease-out-strong) 240ms both,
+    headline-out 220ms var(--ease-in-out-strong) calc(var(--moment-ms, 5000ms) - 300ms) forwards;
+}
+
+.moment-headline.size-m {
+  font-size: 40px;
+}
+
+.moment-headline.size-s {
+  font-size: 34px;
+}
+
+.moment-takeover.tone-good {
+  --tone: #F5C95B;
+  --tone-glow: rgba(245, 201, 91, 0.22);
+}
+
+.moment-takeover.tone-bad {
+  --tone: #ff7b88;
+  --tone-glow: rgba(255, 123, 136, 0.2);
+}
+
+.moment-takeover.tone-alert {
+  --tone: #ffb15c;
+  --tone-glow: rgba(255, 177, 92, 0.22);
+}
+
+.moment-takeover.tone-neutral {
+  --tone: #f3ead0;
+  --tone-glow: rgba(243, 234, 208, 0.14);
+}
+
+@keyframes takeover-in {
+  from {
+    opacity: 0;
+    clip-path: inset(0 42% 0 42% round 10px);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 10px);
+  }
+}
+
+@keyframes takeover-out {
+  from {
+    opacity: 1;
+    clip-path: inset(0 0 0 0 round 10px);
+  }
+  to {
+    opacity: 0;
+    clip-path: inset(0 30% 0 30% round 10px);
+  }
+}
+
+@keyframes glow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rule-in {
+  to { transform: scaleX(1); }
+}
+
+@keyframes headline-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(6px) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+  }
+}
+
+@keyframes headline-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+    filter: blur(5px) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moment-takeover,
+  .moment-headline,
+  .moment-takeover::before,
+  .moment-takeover::after {
+    animation-duration: 1ms;
+  }
+}
+
 .team-waiting {
   color: #f3ead0;
   font-weight: 600;
