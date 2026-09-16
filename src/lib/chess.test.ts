@@ -55,7 +55,7 @@ describe("snapshotFromApiGame", () => {
     const snapshot = snapshotFromApiGame({
       name: "So, Wesley - Caruana, Fabiano",
       fen: "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
-      players: [{ clock: 5400000 }, { clock: 5400000 }],
+      players: [{ clock: 540000 }, { clock: 540000 }], // centiseconds
       status: "*",
     });
     expect(snapshot).not.toBeNull();
