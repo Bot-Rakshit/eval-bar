@@ -12,6 +12,9 @@ const SNAPSHOT: GameSnapshot = {
   turn: "white",
   moveNumber: 1,
   result: null,
+  whiteTeam: "",
+  blackTeam: "",
+  board: 0,
 };
 const SNAPSHOTS = new Map<string, GameSnapshot>([[SNAPSHOT.key, SNAPSHOT]]);
 

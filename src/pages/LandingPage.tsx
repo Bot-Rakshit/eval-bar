@@ -18,6 +18,14 @@ export default function LandingPage() {
             <h2>Evaluation Bars</h2>
             <p>Visualize game dynamics with multiple evaluation bars.</p>
           </a>
+          <a href="olympiad/open" className="landing-product">
+            <h2>Olympiad · India Open</h2>
+            <p>Auto-follows the Indian open team through every round.</p>
+          </a>
+          <a href="olympiad/women" className="landing-product">
+            <h2>Olympiad · India Women</h2>
+            <p>Auto-follows the Indian women's team through every round.</p>
+          </a>
           <a href="ccm" className="landing-product">
             <h2>Chat Chess Moves</h2>
             <p>Engage your audience with interactive chess puzzles in the chat.</p>

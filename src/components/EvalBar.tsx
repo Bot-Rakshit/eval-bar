@@ -2,10 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { BarCustomizations, TrackedGame } from "../types";
 import "./EvalBar.css";
 
+/** Colour one team's players the same way regardless of the side they play. */
+export interface TeamHighlight {
+  team: string;
+  color: string;
+}
+
 interface EvalBarProps {
   game: TrackedGame;
   customizations: BarCustomizations;
   width?: string;
+  highlight?: TeamHighlight;
 }
 
 const RESULT_LABELS: Record<string, string> = {
@@ -44,14 +51,33 @@ function formatEvaluation(game: TrackedGame): string {
   return evaluation > 0 ? `+${formatted}` : formatted;
 }
 
-function formatPlayerName(name: string): string {
+/** Players better known by a name other than their surname. */
+const KNOWN_NAMES: Record<string, string> = {
+  Praggnanandhaa: "Pragg",
+  Nepomniachtchi: "Nepo",
+  Goryachkina: "Gorya",
+  Gukesh: "Gukesh",
+  Harikrishna: "Hari",
+  Erigaisi: "Arjun",
+  Koneru: "Humpy",
+  Dronavalli: "Harika",
+  Deshmukh: "Divya",
+  Agrawal: "Vantika",
+};
+
+function formatPlayerName(name: string, preferSurname = false): string {
   const cleaned = name.replace(/[,.;]/g, "").trim();
   const parts = cleaned.split(" ").filter((part) => part.length > 0);
 
-  if (parts.includes("Praggnanandhaa")) return "Pragg";
-  if (parts.includes("Nepomniachtchi")) return "Nepo";
-  if (parts.includes("Goryachkina")) return "Gorya";
-  if (parts.includes("Gukesh")) return "Gukesh";
+  for (const part of parts) {
+    if (KNOWN_NAMES[part]) return KNOWN_NAMES[part];
+  }
+
+  // Broadcast names come as "Surname, First" — the surname is the on-air name
+  const commaIndex = name.indexOf(",");
+  if (preferSurname && commaIndex > 0) {
+    return name.slice(0, commaIndex).trim().slice(0, 12);
+  }
 
   let shortest = parts[0] || "";
   for (const part of parts) {
@@ -74,7 +100,11 @@ function formatClock(seconds: number): string {
   return `${hours}:${pad(minutes)}:${pad(secs)}`;
 }
 
-export function EvalBar({ game, customizations, width }: EvalBarProps) {
+function isTeam(candidate: string, team: string): boolean {
+  return candidate.trim().toLowerCase() === team.trim().toLowerCase();
+}
+
+export function EvalBar({ game, customizations, width, highlight }: EvalBarProps) {
   const [secondsSinceLastMove, setSecondsSinceLastMove] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -99,6 +129,11 @@ export function EvalBar({ game, customizations, width }: EvalBarProps) {
   const clockColor = (liveClock: number, baseColor: string) =>
     liveClock <= 30 ? "red" : baseColor;
 
+  const whiteIsTeam = highlight !== undefined && isTeam(game.whiteTeam, highlight.team);
+  const blackIsTeam = highlight !== undefined && isTeam(game.blackTeam, highlight.team);
+  const whiteNameColor = whiteIsTeam ? highlight!.color : customizations.whitePlayerNameColor;
+  const blackNameColor = blackIsTeam ? highlight!.color : customizations.blackPlayerNameColor;
+
   return (
     <div
       className={`eval-container ${alert ? "blink-border" : ""}`}
@@ -110,30 +145,30 @@ export function EvalBar({ game, customizations, width }: EvalBarProps) {
     >
       <div className="player-names">
         <span
-          className="white-player"
+          className={whiteIsTeam ? "white-player team-player" : "white-player"}
           style={{
             background: customizations.whitePlayerBackground,
-            color: customizations.whitePlayerNameColor,
+            color: whiteNameColor,
             fontSize: "1.1rem",
             padding: "2px 8px",
             maxWidth: "45%",
             fontWeight: "bold",
           }}
         >
-          {formatPlayerName(game.whitePlayer)}
+          {formatPlayerName(game.whitePlayer, highlight !== undefined)}
         </span>
         <span
-          className="black-player"
+          className={blackIsTeam ? "black-player team-player" : "black-player"}
           style={{
             background: customizations.blackPlayerBackground,
-            color: customizations.blackPlayerNameColor,
+            color: blackNameColor,
             fontSize: "1.1rem",
             padding: "2px 8px",
             maxWidth: "45%",
             fontWeight: "bold",
           }}
         >
-          {formatPlayerName(game.blackPlayer)}
+          {formatPlayerName(game.blackPlayer, highlight !== undefined)}
         </span>
       </div>
 
@@ -143,7 +178,7 @@ export function EvalBar({ game, customizations, width }: EvalBarProps) {
             className="white-player"
             style={{
               background: customizations.whitePlayerBackground,
-              color: clockColor(liveWhiteClock, customizations.whitePlayerNameColor),
+              color: clockColor(liveWhiteClock, whiteNameColor),
               fontSize: "0.8rem",
               padding: "2px 8px",
               maxWidth: "45%",
@@ -184,7 +219,7 @@ export function EvalBar({ game, customizations, width }: EvalBarProps) {
             className="black-player"
             style={{
               background: customizations.blackPlayerBackground,
-              color: clockColor(liveBlackClock, customizations.blackPlayerNameColor),
+              color: clockColor(liveBlackClock, blackNameColor),
               fontSize: "0.8rem",
               padding: "2px 8px",
               maxWidth: "45%",

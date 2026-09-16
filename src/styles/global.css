@@ -31,6 +31,126 @@ body.chroma-view {
   background-color: rgb(21, 185, 81);
 }
 
+/* Team overlay: transparent for OBS, optional backdrop for previewing (?bg=1) */
+body.team-view {
+  background-color: transparent;
+  overflow: hidden;
+}
+
+body.team-view-backdrop {
+  background-color: #03203a;
+  background-image: url("../assets/olympiad-bg.png");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* ---------- Team overlay (Olympiad) ---------- */
+
+.team-overlay {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 40px 24px;
+  box-sizing: border-box;
+}
+
+.team-overlay.align-top {
+  justify-content: flex-start;
+}
+
+.team-overlay.align-bottom {
+  justify-content: flex-end;
+}
+
+.team-header {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  padding: 14px 34px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(4, 30, 56, 0.92), rgba(2, 18, 36, 0.96));
+  border: 1px solid rgba(196, 176, 119, 0.55);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.team-header-name {
+  color: #F5C95B;
+  font-size: 32px;
+}
+
+.team-header-score {
+  font-size: 34px;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-header-score-sep {
+  margin: 0 8px;
+  color: rgba(196, 176, 119, 0.8);
+}
+
+.team-header-opponent {
+  font-size: 32px;
+}
+
+.team-header-meta {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(243, 234, 208, 0.75);
+  padding-left: 14px;
+  border-left: 1px solid rgba(196, 176, 119, 0.5);
+}
+
+.team-waiting {
+  color: rgba(243, 234, 208, 0.85);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 10px 20px;
+  border-radius: 10px;
+  background: rgba(2, 18, 36, 0.7);
+}
+
+/* Bars are authored at ~1000px and zoomed up so text scales with them (?scale=) */
+.team-overlay .eval-bars-container {
+  padding: 0;
+  width: 1000px;
+  max-width: 100%;
+  zoom: var(--team-scale, 1.6);
+}
+
+.team-overlay .eval-container {
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  padding: 4px 6px;
+}
+
+.team-overlay .white-player,
+.team-overlay .black-player {
+  font-family: var(--app-font);
+  max-width: 50% !important;
+}
+
+.team-overlay .player-names:first-child .white-player,
+.team-overlay .player-names:first-child .black-player {
+  font-size: 1rem !important;
+}
+
+.team-overlay .eval-bars {
+  border-radius: 6px;
+}
+
+.team-overlay .team-player {
+  text-shadow: 0 0 12px rgba(245, 201, 91, 0.35);
+}
+
 .page-shell {
   max-width: 1200px;
   margin: 0 auto;

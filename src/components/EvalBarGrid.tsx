@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { BarCustomizations, TrackedGame } from "../types";
-import EvalBar from "./EvalBar";
+import EvalBar, { TeamHighlight } from "./EvalBar";
 
 interface EvalBarGridProps {
   games: TrackedGame[];
   customizations: BarCustomizations;
+  highlight?: TeamHighlight;
 }
 
 /** Ongoing games rank by how decisive they are; finished games go last. */
@@ -13,7 +14,7 @@ function decisiveness(game: TrackedGame): number {
   return Math.abs(game.evaluation ?? 0);
 }
 
-export function EvalBarGrid({ games, customizations }: EvalBarGridProps) {
+export function EvalBarGrid({ games, customizations, highlight }: EvalBarGridProps) {
   const visibleGames = useMemo(() => {
     let list = customizations.hideFinished ? games.filter((game) => !game.result) : games;
     if (customizations.sortByEval) {
@@ -39,6 +40,7 @@ export function EvalBarGrid({ games, customizations }: EvalBarGridProps) {
             game={game}
             customizations={customizations}
             width={isColumn ? "100%" : undefined}
+            highlight={highlight}
           />
         ))}
       </div>

@@ -84,6 +84,10 @@ export function parseSnapshotFromPgn(pgn: string): GameSnapshot | null {
   const fen = finalFenFromPgn(pgn);
   if (!fen) return null;
 
+  // Team events tag rounds as "<round>.<board>"
+  const roundTag = readHeader(pgn, "Round") ?? "";
+  const boardMatch = roundTag.match(/\.(\d+)$/);
+
   return {
     key: makeGameKey(whitePlayer, blackPlayer),
     whitePlayer,
@@ -94,10 +98,13 @@ export function parseSnapshotFromPgn(pgn: string): GameSnapshot | null {
     turn,
     moveNumber,
     result: parseResult(pgn),
+    whiteTeam: readHeader(pgn, "WhiteTeam") ?? "",
+    blackTeam: readHeader(pgn, "BlackTeam") ?? "",
+    board: boardMatch ? Number(boardMatch[1]) : 0,
   };
 }
 
-export function snapshotFromApiGame(game: ApiRoundGame): GameSnapshot | null {
+export function snapshotFromApiGame(game: ApiRoundGame, board = 0): GameSnapshot | null {
   if (!game.name || !game.fen) return null;
   const separator = game.name.indexOf(" - ");
   if (separator === -1) return null;
@@ -121,6 +128,9 @@ export function snapshotFromApiGame(game: ApiRoundGame): GameSnapshot | null {
     turn: fenParts[1] === "w" ? "white" : "black",
     moveNumber: Number(fenParts[5]) || 0,
     result,
+    whiteTeam: game.players?.[0]?.team ?? "",
+    blackTeam: game.players?.[1]?.team ?? "",
+    board,
   };
 }
 

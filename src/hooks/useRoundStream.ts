@@ -80,8 +80,8 @@ export function useRoundStream(roundId: string | null): RoundStreamState {
       try {
         const apiGames = await fetchRoundGames(roundId, controller.signal);
         let changed = false;
-        for (const apiGame of apiGames) {
-          const snapshot = snapshotFromApiGame(apiGame);
+        for (const [index, apiGame] of apiGames.entries()) {
+          const snapshot = snapshotFromApiGame(apiGame, index + 1);
           if (!snapshot) continue;
           const previous = snapshotsRef.current.get(snapshot.key);
           if (previous && snapshotsEqual(previous, snapshot)) continue;

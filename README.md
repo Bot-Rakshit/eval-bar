@@ -45,7 +45,9 @@ This will create an optimized production build that you can deploy to your hosti
 
 3. **Select Tournament**: To display the games , use the /evalbars route, you should be able to see ongoing tournaments, if you see no tournaments that means no tournaments are going on . To still use and test it, you can use a old lichess broadcast link in the custom url input box. You can select the desired tournament/tournaments and then click on Confirm button , and select the required bars and then click "Add selected games bar" 
 
-4. **Customize Layout**: Adjust the layout of the evaluation bars by modifying the customize the bars button. 
+4. **Team overlays (Olympiad)**: `/olympiad/open` and `/olympiad/women` follow the Indian team automatically — they find the section (Open I–V / Women I–IV) and round India is playing in, stream those boards, and move on when the next round starts. The page background is transparent for OBS. Query options: `?team=Uzbekistan` (any team in the event), `?bg=1` (preview on the Olympiad backdrop), `?scale=1.4` (bar size), `?align=top|center|bottom`, `?anchor=<tourId>` (any tour inside another team event's broadcast group).
+
+5. **Customize Layout**: Adjust the layout of the evaluation bars by modifying the customize the bars button. 
 
 
    This will create an optimized production build that you can deploy to your hosting platform.

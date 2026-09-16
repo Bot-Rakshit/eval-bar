@@ -12,6 +12,11 @@ export interface GameSnapshot {
   turn: SideToMove;
   moveNumber: number;
   result: GameResult;
+  /** Team names from team events (Olympiad etc.), empty when unavailable. */
+  whiteTeam: string;
+  blackTeam: string;
+  /** Board number within the round (0 when unknown). */
+  board: number;
 }
 
 export interface TrackedGame extends GameSnapshot {
@@ -122,6 +127,9 @@ export function emptyTrackedGame(whitePlayer: string, blackPlayer: string): Trac
     turn: "",
     moveNumber: 0,
     result: null,
+    whiteTeam: "",
+    blackTeam: "",
+    board: 0,
     evaluation: null,
     mateIn: null,
     depth: 0,

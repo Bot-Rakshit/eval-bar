@@ -27,8 +27,14 @@ interface ApiTournamentListEntry {
 export interface ApiRoundGame {
   name: string;
   fen?: string;
-  players?: Array<{ clock?: number }>;
+  players?: Array<{ name?: string; clock?: number; team?: string; fed?: string }>;
   status?: string;
+}
+
+/** A broadcast group bundles the sections of one event (e.g. Olympiad Open I–V, Women I–IV). */
+export interface BroadcastGroupTour {
+  id: string;
+  name: string;
 }
 
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
@@ -97,6 +103,16 @@ export async function fetchLiveTournaments(): Promise<TournamentSummary[]> {
 export async function fetchTournamentRounds(tournamentId: string): Promise<RoundInfo[]> {
   const data = await fetchJson<{ rounds?: ApiRound[] }>(`${API_BASE}/broadcast/${tournamentId}`);
   return (data.rounds ?? []).map(toRoundInfo);
+}
+
+export async function fetchBroadcastGroup(tournamentId: string): Promise<BroadcastGroupTour[]> {
+  const data = await fetchJson<{
+    tour?: ApiTour;
+    group?: { tours?: Array<{ id: string; name: string }> };
+  }>(`${API_BASE}/broadcast/${tournamentId}`);
+  const tours = data.group?.tours ?? [];
+  if (tours.length > 0) return tours.map((tour) => ({ id: tour.id, name: tour.name }));
+  return data.tour ? [{ id: data.tour.id, name: data.tour.name }] : [];
 }
 
 export async function fetchRoundGames(roundId: string, signal?: AbortSignal): Promise<ApiRoundGame[]> {
