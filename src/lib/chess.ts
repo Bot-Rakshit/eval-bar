@@ -127,8 +127,9 @@ export function snapshotFromApiGame(game: ApiRoundGame, board = 0): GameSnapshot
     whitePlayer,
     blackPlayer,
     fen,
-    whiteClock: game.players?.[0]?.clock ? Math.floor(game.players[0].clock / 1000) : 0,
-    blackClock: game.players?.[1]?.clock ? Math.floor(game.players[1].clock / 1000) : 0,
+    // Round API clocks are in centiseconds
+    whiteClock: game.players?.[0]?.clock ? Math.floor(game.players[0].clock / 100) : 0,
+    blackClock: game.players?.[1]?.clock ? Math.floor(game.players[1].clock / 100) : 0,
     turn: fenParts[1] === "w" ? "white" : "black",
     moveNumber: Number(fenParts[5]) || 0,
     result,

@@ -147,7 +147,7 @@ body.team-view-backdrop {
 
 /* Live and placeholder grids sit side by side; keep the same gap between them */
 .team-boards .eval-bars-container + .eval-bars-container {
-  margin-left: 14px;
+  margin-left: 8px;
 }
 
 .team-overlay .eval-container {
@@ -163,6 +163,12 @@ body.team-view-backdrop .eval-container {
 
 /* Eval number sits over cream or navy depending on the score — outline it so it reads on both */
 .team-overlay .evaluation-value {
+  /* Centre on the bar: container padding (4px) + half the 26px bar */
+  top: auto;
+  bottom: 17px;
+  transform: translate(-50%, 50%);
+  margin: 0 !important;
+  line-height: 1;
   color: #ffffff !important;
   -webkit-text-stroke: 1px #021428;
   paint-order: stroke fill;

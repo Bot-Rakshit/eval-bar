@@ -30,7 +30,7 @@ const OLYMPIAD_THEME: BarCustomizations = {
   blackPlayerNameColor: "#ffffff",
   turnArrowColor: "#c4b077",
   barWidth: 22,
-  barGap: 14,
+  barGap: 8,
   barHeight: 26,
   showClocks: true,
   showMoveNumber: true,
