@@ -161,7 +161,7 @@ body.team-view-backdrop .eval-container {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-/* Eval number sits over cream or navy depending on the score — outline it so it reads on both */
+/* Eval number sits in a navy pill so it reads over both bar colours */
 .team-overlay .evaluation-value {
   /* Centre on the bar: container padding (4px) + half the 26px bar */
   top: auto;
@@ -169,10 +169,13 @@ body.team-view-backdrop .eval-container {
   transform: translate(-50%, 50%);
   margin: 0 !important;
   line-height: 1;
+  font-size: 14px !important;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #021428;
+  border: 1px solid #c4b077;
   color: #ffffff !important;
-  -webkit-text-stroke: 1px #021428;
-  paint-order: stroke fill;
-  text-shadow: 0 0 5px rgba(2, 20, 40, 0.95), 0 1px 2px rgba(2, 20, 40, 0.95);
+  white-space: nowrap;
 }
 
 .team-overlay .white-player,
