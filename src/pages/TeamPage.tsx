@@ -66,14 +66,22 @@ function matchScore(games: TrackedGame[], team: string): { us: number; them: num
   return { us, them };
 }
 
-const PLACEHOLDER_BOARDS = [1, 2, 3, 4];
+const BOARDS_PER_MATCH = 4;
 
-/** Stand-in bars shown until the round's pairings are published. */
-function PlaceholderBars({ team, theme }: { team: string; theme: BarCustomizations }) {
+/** Stand-in bars for boards whose pairings haven't been published yet. */
+function PlaceholderBars({
+  team,
+  theme,
+  boards,
+}: {
+  team: string;
+  theme: BarCustomizations;
+  boards: number[];
+}) {
   return (
     <div className="eval-bars-container">
       <div className="eval-bars-grid" style={{ gap: `${theme.barGap}px` }}>
-        {PLACEHOLDER_BOARDS.map((board) => (
+        {boards.map((board) => (
           <div
             key={board}
             className="eval-container placeholder-bar"
@@ -94,7 +102,6 @@ function PlaceholderBars({ team, theme }: { team: string; theme: BarCustomizatio
               <span className="black-player">1:30:00</span>
             </div>
             <div className="placeholder-eval">
-              <span className="placeholder-eval-label">Pairings soon</span>
               <div
                 className="eval-bars"
                 style={{ height: `${theme.barHeight}px`, background: theme.blackBarColor }}
@@ -186,11 +193,21 @@ export default function TeamPage() {
         </span>
       </header>
 
-      {games.length > 0 ? (
-        <EvalBarGrid games={games} customizations={OLYMPIAD_THEME} highlight={highlight} />
-      ) : (
-        <PlaceholderBars team={team} theme={OLYMPIAD_THEME} />
-      )}
+      <div className="team-boards">
+        {games.length > 0 && (
+          <EvalBarGrid games={games} customizations={OLYMPIAD_THEME} highlight={highlight} />
+        )}
+        {games.length < BOARDS_PER_MATCH && (
+          <PlaceholderBars
+            team={team}
+            theme={OLYMPIAD_THEME}
+            boards={Array.from(
+              { length: BOARDS_PER_MATCH - games.length },
+              (_, index) => games.length + index + 1
+            )}
+          />
+        )}
+      </div>
       {games.length === 0 && error && <p className="team-waiting">Reconnecting to Lichess…</p>}
     </div>
   );

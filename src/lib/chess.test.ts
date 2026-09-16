@@ -75,7 +75,9 @@ describe("snapshotFromApiGame", () => {
     expect(snapshot!.result).toBe("1/2-1/2");
   });
 
-  it("rejects games without fen", () => {
-    expect(snapshotFromApiGame({ name: "A - B" })).toBeNull();
+  it("treats a missing fen as the starting position (game not started)", () => {
+    const snapshot = snapshotFromApiGame({ name: "A - B" });
+    expect(snapshot?.fen).toBe("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    expect(snapshot?.turn).toBe("white");
   });
 });

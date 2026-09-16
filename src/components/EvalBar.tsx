@@ -63,6 +63,7 @@ const KNOWN_NAMES: Record<string, string> = {
   Dronavalli: "Harika",
   Deshmukh: "Divya",
   Agrawal: "Vantika",
+  Savitha: "Savitha",
 };
 
 function formatPlayerName(name: string, preferSurname = false): string {
@@ -126,8 +127,11 @@ export function EvalBar({ game, customizations, width, highlight }: EvalBarProps
   const liveWhiteClock = turn === "white" ? whiteClock - secondsSinceLastMove : whiteClock;
   const liveBlackClock = turn === "black" ? blackClock - secondsSinceLastMove : blackClock;
 
+  // Before the first move Lichess reports no clocks — don't flash 0:00:00 in red
+  const clocksUnknown = whiteClock === 0 && blackClock === 0;
   const clockColor = (liveClock: number, baseColor: string) =>
-    liveClock <= 30 ? "red" : baseColor;
+    !clocksUnknown && liveClock <= 30 ? "red" : baseColor;
+  const clockText = (liveClock: number) => (clocksUnknown ? "–:––:––" : formatClock(liveClock));
 
   const whiteIsTeam = highlight !== undefined && isTeam(game.whiteTeam, highlight.team);
   const blackIsTeam = highlight !== undefined && isTeam(game.blackTeam, highlight.team);
@@ -185,7 +189,7 @@ export function EvalBar({ game, customizations, width, highlight }: EvalBarProps
               fontWeight: "bold",
             }}
           >
-            {formatClock(liveWhiteClock)}
+            {clockText(liveWhiteClock)}
           </span>
           <div
             style={{
@@ -226,7 +230,7 @@ export function EvalBar({ game, customizations, width, highlight }: EvalBarProps
               fontWeight: "bold",
             }}
           >
-            {formatClock(liveBlackClock)}
+            {clockText(liveBlackClock)}
           </span>
         </div>
       )}

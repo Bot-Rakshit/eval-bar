@@ -104,14 +104,18 @@ export function parseSnapshotFromPgn(pgn: string): GameSnapshot | null {
   };
 }
 
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 export function snapshotFromApiGame(game: ApiRoundGame, board = 0): GameSnapshot | null {
-  if (!game.name || !game.fen) return null;
+  if (!game.name) return null;
   const separator = game.name.indexOf(" - ");
   if (separator === -1) return null;
 
   const whitePlayer = game.name.slice(0, separator);
   const blackPlayer = game.name.slice(separator + 3);
-  const fenParts = game.fen.split(" ");
+  // Games that haven't started yet come with an empty FEN
+  const fen = game.fen || START_FEN;
+  const fenParts = fen.split(" ");
 
   let result: GameResult = null;
   if (game.status && game.status !== "*") {
@@ -122,7 +126,7 @@ export function snapshotFromApiGame(game: ApiRoundGame, board = 0): GameSnapshot
     key: makeGameKey(whitePlayer, blackPlayer),
     whitePlayer,
     blackPlayer,
-    fen: game.fen,
+    fen,
     whiteClock: game.players?.[0]?.clock ? Math.floor(game.players[0].clock / 1000) : 0,
     blackClock: game.players?.[1]?.clock ? Math.floor(game.players[1].clock / 1000) : 0,
     turn: fenParts[1] === "w" ? "white" : "black",

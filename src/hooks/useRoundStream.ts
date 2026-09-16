@@ -4,6 +4,7 @@ import { fetchRoundGames, streamRoundPgn } from "../api/lichess";
 import { gameKeyFromPgn, parseSnapshotFromPgn, snapshotFromApiGame, snapshotsEqual } from "../lib/chess";
 
 const POLL_INTERVAL_MS = 45000;
+const BOOTSTRAP_POLL_INTERVAL_MS = 30000;
 const GAME_SEPARATOR = "\n\n\n";
 
 export type StreamMode = "idle" | "stream" | "poll";
@@ -43,6 +44,8 @@ export function useRoundStream(roundId: string | null): RoundStreamState {
     const controller = new AbortController();
     let cancelled = false;
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+    let bootstrapTimeout: ReturnType<typeof setTimeout> | null = null;
+    let streamDelivered = false;
 
     const publish = () => {
       if (!cancelled) {
@@ -73,10 +76,13 @@ export function useRoundStream(roundId: string | null): RoundStreamState {
         snapshotsRef.current.set(key, snapshot);
         changed = true;
       }
-      if (changed) publish();
+      if (changed) {
+        streamDelivered = true;
+        publish();
+      }
     };
 
-    const poll = async () => {
+    const fetchAndMerge = async () => {
       try {
         const apiGames = await fetchRoundGames(roundId, controller.signal);
         let changed = false;
@@ -94,10 +100,25 @@ export function useRoundStream(roundId: string | null): RoundStreamState {
           console.error("Round polling failed:", error);
         }
       }
+    };
+
+    const poll = async () => {
+      await fetchAndMerge();
       if (!cancelled) {
         pollTimeout = setTimeout(poll, POLL_INTERVAL_MS);
       }
     };
+
+    // The PGN stream stays silent until a game has moves, so pull the
+    // pairings from the round API until the stream delivers something.
+    const bootstrap = async () => {
+      if (cancelled || streamDelivered || pollingStartedRef.current) return;
+      await fetchAndMerge();
+      if (!cancelled && !streamDelivered && !pollingStartedRef.current) {
+        bootstrapTimeout = setTimeout(bootstrap, BOOTSTRAP_POLL_INTERVAL_MS);
+      }
+    };
+    void bootstrap();
 
     const startPolling = () => {
       if (pollingStartedRef.current || cancelled) return;
@@ -122,6 +143,7 @@ export function useRoundStream(roundId: string | null): RoundStreamState {
       cancelled = true;
       controller.abort();
       if (pollTimeout) clearTimeout(pollTimeout);
+      if (bootstrapTimeout) clearTimeout(bootstrapTimeout);
     };
   }, [roundId]);
 

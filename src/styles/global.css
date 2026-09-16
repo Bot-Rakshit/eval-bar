@@ -122,11 +122,32 @@ body.team-view-backdrop {
 }
 
 /* Bars are authored at ~1000px and zoomed up so text scales with them (?scale=) */
-.team-overlay .eval-bars-container {
-  padding: 0;
+.team-boards {
+  display: flex;
+  justify-content: center;
   width: 1000px;
   max-width: 100%;
   zoom: var(--team-scale, 1.6);
+}
+
+.team-overlay .eval-bars-container {
+  padding: 0;
+  width: auto;
+}
+
+.team-boards .eval-bars-grid {
+  flex-wrap: nowrap;
+}
+
+/* Fixed board width so live and placeholder bars line up */
+.team-boards .eval-container {
+  width: 220px !important;
+  flex-shrink: 0;
+}
+
+/* Live and placeholder grids sit side by side; keep the same gap between them */
+.team-boards .eval-bars-container + .eval-bars-container {
+  margin-left: 14px;
 }
 
 .team-overlay .eval-container {
@@ -189,15 +210,6 @@ body.team-view-backdrop .eval-container {
   justify-content: flex-end;
   flex-grow: 1;
   min-height: 30px;
-}
-
-.placeholder-eval-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #f3ead0;
-  margin-bottom: 4px;
 }
 
 .placeholder-bar .white-bar {
