@@ -65,6 +65,50 @@ function matchScore(games: TrackedGame[], team: string): { us: number; them: num
   return { us, them };
 }
 
+const PLACEHOLDER_BOARDS = [1, 2, 3, 4];
+
+/** Stand-in bars shown until the round's pairings are published. */
+function PlaceholderBars({ team, theme }: { team: string; theme: BarCustomizations }) {
+  return (
+    <div className="eval-bars-container">
+      <div className="eval-bars-grid" style={{ gap: `${theme.barGap}px` }}>
+        {PLACEHOLDER_BOARDS.map((board) => (
+          <div
+            key={board}
+            className="eval-container placeholder-bar"
+            style={{
+              width: `${theme.barWidth}%`,
+              background: theme.containerBackground,
+              border: `1px solid ${theme.containerBorderColor}`,
+            }}
+          >
+            <div className="player-names">
+              <span className="white-player team-player" style={{ color: TEAM_COLOR }}>
+                {team}
+              </span>
+              <span className="black-player placeholder-muted">Board {board}</span>
+            </div>
+            <div className="player-names placeholder-muted" style={{ alignItems: "center" }}>
+              <span className="white-player">1:30:00</span>
+              <span className="black-player">1:30:00</span>
+            </div>
+            <div className="placeholder-eval">
+              <span className="placeholder-eval-label">Pairings soon</span>
+              <div
+                className="eval-bars"
+                style={{ height: `${theme.barHeight}px`, background: theme.blackBarColor }}
+              >
+                <div className="white-bar" style={{ width: "50%", background: theme.whiteBarColor }} />
+                <div className="zero-marker" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TeamPage() {
   const { section = "open" } = useParams<{ section: string }>();
   const [params] = useSearchParams();
@@ -141,10 +185,9 @@ export default function TeamPage() {
       {games.length > 0 ? (
         <EvalBarGrid games={games} customizations={OLYMPIAD_THEME} highlight={highlight} />
       ) : (
-        <p className="team-waiting">
-          {error ? "Reconnecting to Lichess…" : `Waiting for ${team}'s pairings…`}
-        </p>
+        <PlaceholderBars team={team} theme={OLYMPIAD_THEME} />
       )}
+      {games.length === 0 && error && <p className="team-waiting">Reconnecting to Lichess…</p>}
     </div>
   );
 }

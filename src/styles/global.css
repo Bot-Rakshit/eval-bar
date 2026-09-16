@@ -147,6 +147,51 @@ body.team-view-backdrop {
   border-radius: 6px;
 }
 
+/* Placeholder bars before pairings exist */
+.team-overlay .placeholder-bar .white-player,
+.team-overlay .placeholder-bar .black-player {
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 2px 8px;
+}
+
+.team-overlay .placeholder-bar .player-names:nth-child(2) .white-player,
+.team-overlay .placeholder-bar .player-names:nth-child(2) .black-player {
+  font-size: 0.8rem;
+}
+
+.placeholder-muted {
+  color: rgba(243, 234, 208, 0.55);
+}
+
+.placeholder-eval {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex-grow: 1;
+  min-height: 30px;
+}
+
+.placeholder-eval-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(243, 234, 208, 0.6);
+  margin-bottom: 4px;
+}
+
+.placeholder-bar .white-bar {
+  opacity: 0.55;
+  animation: placeholder-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes placeholder-breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
 .team-overlay .team-player {
   text-shadow: 0 0 12px rgba(245, 201, 91, 0.35);
 }
