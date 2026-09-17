@@ -19,17 +19,25 @@ export function teamMatches(candidate: string | undefined, team: string): boolea
   return (candidate ?? "").trim().toLowerCase() === team.trim().toLowerCase();
 }
 
+/** How long before a round starts we switch from the last results to its fixtures. */
+const FIXTURES_AHEAD_MS = 6 * 60 * 60 * 1000;
+
 /**
- * Rounds worth checking, best first: the ongoing round, otherwise the most
- * recently started one, then the round before it (the new round's games can
- * take a while to appear after its scheduled start).
+ * Rounds worth checking, best first: the ongoing round; otherwise the next
+ * round once it's close enough that its pairings matter more than the last
+ * results (only used if its games exist); then the most recently started
+ * round and the one before it (a new round's games can take a while to
+ * appear after its scheduled start).
  */
-function candidateRounds(rounds: RoundInfo[], now: number): RoundInfo[] {
+export function candidateRounds(rounds: RoundInfo[], now: number): RoundInfo[] {
   const ongoing = rounds.find((round) => round.ongoing);
   if (ongoing) return [ongoing];
+  const candidates: RoundInfo[] = [];
+  const upcoming = rounds.find((round) => round.startsAt !== null && round.startsAt > now);
+  if (upcoming && upcoming.startsAt! - now <= FIXTURES_AHEAD_MS) candidates.push(upcoming);
   const started = rounds.filter((round) => round.startsAt !== null && round.startsAt <= now);
-  if (started.length === 0) return rounds.slice(0, 1);
-  return started.slice(-2).reverse();
+  candidates.push(...(started.length === 0 ? rounds.slice(0, 1) : started.slice(-2).reverse()));
+  return candidates.filter((round, index) => candidates.indexOf(round) === index);
 }
 
 /**
