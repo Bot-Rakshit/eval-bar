@@ -322,7 +322,7 @@ body.team-view-backdrop {
 
 /* Fixed board width so live and placeholder bars line up */
 .team-boards .eval-container {
-  width: 220px !important;
+  width: 232px !important;
   flex-shrink: 0;
 }
 
@@ -367,7 +367,14 @@ body.team-view-backdrop .eval-container {
 
 .team-overlay .player-names:first-child .white-player,
 .team-overlay .player-names:first-child .black-player {
-  font-size: 1rem !important;
+  font-size: 1.12rem !important;
+}
+
+/* Clocks and move counter */
+.team-overlay .player-names:nth-child(2) .white-player,
+.team-overlay .player-names:nth-child(2) .black-player,
+.team-overlay .player-names:nth-child(2) > span {
+  font-size: 0.92rem !important;
 }
 
 .team-overlay .eval-bars {
