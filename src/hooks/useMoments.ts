@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { TrackedGame } from "../types";
 import { BoardMemory, detectMoments, freshMemory, Moment } from "../lib/intel/moments";
 
-const MAX_QUEUE = 3;
-const GAP_MS = 500;
+/** Only the single most important pending moment is kept — never a backlog. */
+const MAX_QUEUE = 1;
+/** Quiet time after a headline before another may show. */
+const COOLDOWN_MS = 30000;
 
 export interface ActiveMoment {
   moment: Moment;
@@ -12,7 +14,8 @@ export interface ActiveMoment {
 
 /**
  * Watches tracked games and surfaces one on-air "moment" at a time for the
- * whole overlay, queued by priority. The bars make way for it while it shows.
+ * whole overlay — at most one every 30 seconds so it never feels like a
+ * ticker. The bars make way for it while it shows.
  */
 export function useMoments(games: TrackedGame[], team: string, enabled = true): ActiveMoment | null {
   const [active, setActive] = useState<ActiveMoment | null>(null);
@@ -33,7 +36,7 @@ export function useMoments(games: TrackedGame[], team: string, enabled = true): 
       setActive(next);
       timerRef.current = setTimeout(() => {
         setActive(null);
-        timerRef.current = setTimeout(show, GAP_MS);
+        timerRef.current = setTimeout(show, COOLDOWN_MS);
       }, next.moment.durationMs);
     };
 
