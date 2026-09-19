@@ -134,11 +134,11 @@ body.team-view-backdrop {
   position: relative;
 }
 
-.team-boards .eval-bars-container {
+.team-boards .oly-grid {
   transition: opacity 220ms var(--ease-out-strong), transform 220ms var(--ease-out-strong), filter 220ms var(--ease-out-strong);
 }
 
-.team-boards.is-hidden .eval-bars-container {
+.team-boards.is-hidden .oly-grid {
   opacity: 0;
   transform: translateY(6px);
   filter: blur(4px);
@@ -302,124 +302,23 @@ body.team-view-backdrop {
   background: rgba(2, 18, 36, 0.7);
 }
 
-/* Bars are authored at ~1000px and zoomed up so text scales with them (?scale=) */
+/* The strip is authored at its natural width and zoomed as a whole (?scale=) */
 .team-boards {
   display: flex;
   justify-content: center;
-  width: 1000px;
+  width: max-content;
   max-width: 100%;
   zoom: var(--team-scale, 1.6);
 }
 
-.team-overlay .eval-bars-container {
-  padding: 0;
-  width: auto;
-}
-
-.team-boards .eval-bars-grid {
-  flex-wrap: nowrap;
-}
-
-/* Fixed board width so live and placeholder bars line up */
-.team-boards .eval-container {
-  width: 232px !important;
-  flex-shrink: 0;
-}
-
-/* Live and placeholder grids sit side by side; keep the same gap between them */
-.team-boards .eval-bars-container + .eval-bars-container {
-  margin-left: 8px;
-}
-
-.team-overlay .eval-container {
-  border-radius: 10px;
-  padding: 4px 6px;
-}
-
-/* Soft shadows only when previewing on the backdrop */
-body.team-view-backdrop .team-header,
-body.team-view-backdrop .eval-container {
+/* Soft shadow only when previewing on the backdrop. drop-shadow, not
+   box-shadow: the card's real edge is an SVG path, notch and all. */
+body.team-view-backdrop .team-header {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-/* Eval number sits in a navy pill so it reads over both bar colours */
-.team-overlay .evaluation-value {
-  /* Centre on the bar: container padding (4px) + half the 26px bar */
-  top: auto;
-  bottom: 17px;
-  transform: translate(-50%, 50%);
-  margin: 0 !important;
-  line-height: 1;
-  font-size: 14px !important;
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: #021428;
-  border: 1px solid #c4b077;
-  color: #ffffff !important;
-  white-space: nowrap;
-}
-
-.team-overlay .white-player,
-.team-overlay .black-player {
-  font-family: var(--app-font);
-  max-width: 50% !important;
-}
-
-.team-overlay .player-names:first-child .white-player,
-.team-overlay .player-names:first-child .black-player {
-  font-size: 1.12rem !important;
-}
-
-/* Clocks and move counter */
-.team-overlay .player-names:nth-child(2) .white-player,
-.team-overlay .player-names:nth-child(2) .black-player,
-.team-overlay .player-names:nth-child(2) > span {
-  font-size: 0.92rem !important;
-}
-
-.team-overlay .eval-bars {
-  border-radius: 6px;
-}
-
-/* Placeholder bars before pairings exist */
-.team-overlay .placeholder-bar .white-player,
-.team-overlay .placeholder-bar .black-player {
-  font-size: 1rem;
-  font-weight: 700;
-  padding: 2px 8px;
-}
-
-.team-overlay .placeholder-bar .player-names:nth-child(2) .white-player,
-.team-overlay .placeholder-bar .player-names:nth-child(2) .black-player {
-  font-size: 0.8rem;
-}
-
-.team-overlay .placeholder-bar .white-player,
-.team-overlay .placeholder-bar .black-player,
-.placeholder-muted {
-  color: #f3ead0;
-}
-
-.placeholder-eval {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  flex-grow: 1;
-  min-height: 30px;
-}
-
-.placeholder-bar .white-bar {
-  animation: placeholder-breathe 2.4s ease-in-out infinite;
-}
-
-@keyframes placeholder-breathe {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
-}
-
-.team-overlay .team-player {
-  text-shadow: 0 0 12px rgba(245, 201, 91, 0.35);
+body.team-view-backdrop .oly-card {
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.45));
 }
 
 .page-shell {

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, TrackedGame } from "../types";
+import { TrackedGame } from "../types";
 import { useRoundStream } from "../hooks/useRoundStream";
 import { useTeamRound, teamMatches } from "../hooks/useTeamRound";
 import { useTrackedGames } from "../hooks/useTrackedGames";
-import EvalBarGrid from "../components/EvalBarGrid";
+import OlympiadGrid from "../components/OlympiadGrid";
 import { ActiveMoment, useMoments } from "../hooks/useMoments";
 import { projectedScore } from "../lib/intel/moments";
 import { DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
@@ -12,35 +12,10 @@ import { DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
 /** Any tour in the Olympiad group — the group lists every section. */
 const OLYMPIAD_ANCHOR_TOUR = "n1pPI5Q0";
 const DEFAULT_TEAM = "India";
-const TEAM_COLOR = "#F5C95B";
 
 const SECTIONS: Record<string, { prefix: string; label: string }> = {
   open: { prefix: "Open", label: "Open" },
   women: { prefix: "Women", label: "Women" },
-};
-
-/** Tuned for the navy/gold Olympiad backdrop the bars sit on. */
-const OLYMPIAD_THEME: BarCustomizations = {
-  ...DEFAULT_CUSTOMIZATIONS,
-  // Opaque so nothing bleeds through on a chroma key
-  containerBackground: "linear-gradient(180deg, #06254a, #021428)",
-  containerBorderColor: "#c4b077",
-  whiteBarColor: "#f3ead0",
-  blackBarColor: "#0b1c30",
-  whitePlayerBackground: "Transparent",
-  blackPlayerBackground: "Transparent",
-  whitePlayerNameColor: "#ffffff",
-  blackPlayerNameColor: "#ffffff",
-  turnArrowColor: "#c4b077",
-  barWidth: 22,
-  barGap: 8,
-  barHeight: 26,
-  showClocks: true,
-  showMoveNumber: true,
-  sortByEval: false,
-  hideFinished: false,
-  layoutDirection: "row",
-  showRoundName: false,
 };
 
 function formatPoints(points: number): string {
@@ -67,57 +42,6 @@ function matchScore(games: TrackedGame[], team: string): { us: number; them: num
     }
   }
   return { us, them };
-}
-
-const BOARDS_PER_MATCH = 4;
-
-/** Stand-in bars for boards whose pairings haven't been published yet. */
-function PlaceholderBars({
-  team,
-  theme,
-  boards,
-}: {
-  team: string;
-  theme: BarCustomizations;
-  boards: number[];
-}) {
-  return (
-    <div className="eval-bars-container">
-      <div className="eval-bars-grid" style={{ gap: `${theme.barGap}px` }}>
-        {boards.map((board) => (
-          <div
-            key={board}
-            className="eval-container placeholder-bar"
-            style={{
-              width: `${theme.barWidth}%`,
-              background: theme.containerBackground,
-              border: `1px solid ${theme.containerBorderColor}`,
-            }}
-          >
-            <div className="player-names">
-              <span className="white-player team-player" style={{ color: TEAM_COLOR }}>
-                {team}
-              </span>
-              <span className="black-player placeholder-muted">Board {board}</span>
-            </div>
-            <div className="player-names placeholder-muted" style={{ alignItems: "center" }}>
-              <span className="white-player">1:30:00</span>
-              <span className="black-player">1:30:00</span>
-            </div>
-            <div className="placeholder-eval">
-              <div
-                className="eval-bars"
-                style={{ height: `${theme.barHeight}px`, background: theme.blackBarColor }}
-              >
-                <div className="white-bar" style={{ width: "50%", background: theme.whiteBarColor }} />
-                <div className="zero-marker" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /** ?demo=1 — scripted boards cycling through every callout, for previewing the look. */
@@ -231,7 +155,6 @@ export default function TeamPage() {
 
   const score = matchScore(games, team);
   const projected = momentsEnabled ? projectedScore(games, team) : null;
-  const highlight = useMemo(() => ({ team, color: TEAM_COLOR }), [team]);
 
   return (
     <div
@@ -263,19 +186,7 @@ export default function TeamPage() {
 
       <div className={active ? "team-boards is-hidden" : "team-boards"}>
         {active && <MomentTakeover active={active} />}
-        {games.length > 0 && (
-          <EvalBarGrid games={games} customizations={OLYMPIAD_THEME} highlight={highlight} />
-        )}
-        {games.length < BOARDS_PER_MATCH && (
-          <PlaceholderBars
-            team={team}
-            theme={OLYMPIAD_THEME}
-            boards={Array.from(
-              { length: BOARDS_PER_MATCH - games.length },
-              (_, index) => games.length + index + 1
-            )}
-          />
-        )}
+        <OlympiadGrid games={games} team={team} />
       </div>
       {games.length === 0 && error && <p className="team-waiting">Reconnecting to Lichess…</p>}
     </div>

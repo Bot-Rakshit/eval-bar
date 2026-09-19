@@ -1,0 +1,271 @@
+/* Olympiad board card — every colour and size is a token, tune them here. */
+
+.oly-card {
+  --card-fill: #071a30;
+  --notch-fill: #182e46;
+  --card-stroke: #ebc463;
+  /* The card stroke, dialled back — closes the top of the notch without
+     framing the number as hard as the rest of the edge. */
+  --notch-stroke: rgba(235, 196, 99, 0.3);
+
+  --name: #ffffff;
+  --name-team: #e4c372;
+  --name-muted: rgba(243, 234, 208, 0.55);
+
+  --move: #f9f1da;
+
+  /* Eval bar — Chessiro's game-review bar, recoloured for this card */
+  --bar-white: #f9f1da;
+  --bar-black: #2c2717;
+  /* Same line as the notch, so the two quiet edges stay together */
+  --bar-stroke: var(--notch-stroke);
+  --eval-on-white: #000000;
+  --eval-on-black: #f9f1da;
+
+  --clock: #ffffff;
+  --clock-team: #e4c372;
+  --clock-low: #ff6b6b;
+
+  --name-size: 18px;
+  --name-weight: 500;
+  --move-size: 14px;
+  --move-weight: 500;
+  --eval-size: 14px;
+  --eval-weight: 600;
+  --eval-weight-on-white: 800;
+  --clock-size: 14px;
+  --clock-weight: 400;
+
+  /* Width of one digit cell in the clocks, of the colon, and the air either
+     side of it — H : MM : SS */
+  --digit-w: 0.6em;
+  --sep-w: 0.3em;
+  --sep-gap: 0.18em;
+
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* Card fill, notch fill, then both strokes over the top */
+.oly-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.oly-card-fill {
+  fill: var(--card-fill);
+}
+
+.oly-notch-fill {
+  fill: var(--notch-fill);
+}
+
+.oly-notch-stroke {
+  fill: none;
+  stroke: var(--notch-stroke);
+  stroke-linecap: butt;
+}
+
+.oly-stroke {
+  fill: none;
+  stroke: var(--card-stroke);
+  stroke-linejoin: round;
+  stroke-linecap: butt;
+}
+
+/* Move number, sitting in the notch */
+.oly-move {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Sora", var(--app-font);
+  font-weight: var(--move-weight);
+  font-size: var(--move-size);
+  line-height: 1;
+  color: var(--move);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Everything inside the card */
+.oly-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px 11px;
+  box-sizing: border-box;
+}
+
+/* ---------- Names ---------- */
+
+.oly-names {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Holds the notch's width open so the names never run under the number */
+.oly-notch-gutter {
+  flex: 0 0 auto;
+}
+
+.oly-name {
+  flex: 1 1 0;
+  min-width: 0;
+  font-family: "Outfit", var(--app-font);
+  font-weight: var(--name-weight);
+  font-size: var(--name-size);
+  line-height: 1.15;
+  color: var(--name);
+  overflow: hidden;
+  /* The dots are added in JS, which measures the cut — see PlayerName.
+     This is only the backstop if that ever comes up short. */
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.oly-name:first-child {
+  text-align: left;
+}
+
+.oly-name:last-child {
+  text-align: right;
+}
+
+.oly-name.is-team {
+  color: var(--name-team);
+}
+
+.oly-name.is-muted {
+  color: var(--name-muted);
+  font-weight: 500;
+}
+
+/* ---------- Eval bar ---------- */
+
+.oly-bar {
+  position: relative;
+  height: 21px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bar-black);
+  box-shadow: inset 0 0 0 1px var(--bar-stroke);
+}
+
+/* Driven by scaleX so the fill moves on the compositor, not by re-layout */
+.oly-bar-white {
+  position: absolute;
+  inset: 0;
+  background: var(--bar-white);
+  transform-origin: left center;
+  transition: transform 550ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* The number rides in the leading side's territory; the two copies
+   cross-fade so the swap never reads as a jump. */
+.oly-eval {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: "Sora", var(--app-font);
+  font-weight: var(--eval-weight);
+  font-size: var(--eval-size);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 300ms ease;
+}
+
+.oly-eval.on-white {
+  left: 9px;
+  color: var(--eval-on-white);
+  /* Dark on light reads thinner than light on dark at the same weight, so
+     this copy carries one step more to match the one on the dark side. */
+  font-weight: var(--eval-weight-on-white);
+}
+
+.oly-eval.on-black {
+  right: 9px;
+  color: var(--eval-on-black);
+}
+
+/* ---------- Clocks ---------- */
+
+.oly-clocks {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.oly-mono {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: "Outfit", var(--app-font);
+  font-weight: var(--clock-weight);
+  font-size: var(--clock-size);
+  line-height: 1;
+  color: var(--clock);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fixed cells, so a changing digit never shifts the line */
+.oly-mono-cell {
+  display: inline-block;
+  width: var(--digit-w);
+  text-align: center;
+}
+
+.oly-mono-sep {
+  display: inline-block;
+  width: var(--sep-w);
+  /* Fixed, so the row still cannot shift as the digits change */
+  margin: 0 var(--sep-gap);
+  text-align: center;
+}
+
+.oly-mono.is-team {
+  color: var(--clock-team);
+}
+
+.oly-mono.is-low {
+  color: var(--clock-low);
+}
+
+.oly-mono.is-muted {
+  color: var(--name-muted);
+}
+
+/* ---------- Placeholder ---------- */
+
+.oly-card.is-empty .oly-bar-white {
+  animation: oly-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes oly-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* ---------- The strip ---------- */
+
+.oly-grid {
+  display: flex;
+  align-items: flex-end;
+}
