@@ -201,6 +201,24 @@
   color: var(--eval-on-black);
 }
 
+/* ---------- Result ---------- */
+
+/* Stands in for the bar and the clocks together, so it takes their height
+   and the names stay exactly where they were. */
+.oly-result {
+  height: calc(21px + 7px + var(--clock-size, 15px) * 1.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Sora", var(--app-font);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--eval-on-black);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- Clocks ---------- */
 
 .oly-clocks {

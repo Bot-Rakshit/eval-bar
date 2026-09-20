@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { TrackedGame } from "../types";
 import { useRoundStream } from "../hooks/useRoundStream";
@@ -125,19 +125,36 @@ export default function TeamPage() {
   }, [bgMode]);
 
   // Prefer PGN team tags; fall back to the names discovered from the round API.
+  //
+  // The order is locked the first time a game shows up. `board` is not stable
+  // across updates — the round API seeds it with the game's index in the whole
+  // round, then the PGN stream overwrites it with the Round-tag suffix, one board
+  // at a time — so re-sorting on every snapshot made the cards hop around.
+  const orderRef = useRef<string[]>([]);
   const selectedKeys = useMemo((): string[] => {
     const players = target?.players ?? [];
-    return Array.from(snapshots.values())
-      .filter(
-        (snapshot) =>
-          teamMatches(snapshot.whiteTeam, team) ||
-          teamMatches(snapshot.blackTeam, team) ||
-          players.includes(snapshot.whitePlayer) ||
-          players.includes(snapshot.blackPlayer)
-      )
+    const wanted = Array.from(snapshots.values()).filter(
+      (snapshot) =>
+        teamMatches(snapshot.whiteTeam, team) ||
+        teamMatches(snapshot.blackTeam, team) ||
+        players.includes(snapshot.whitePlayer) ||
+        players.includes(snapshot.blackPlayer)
+    );
+    const wantedKeys = new Set(wanted.map((snapshot) => snapshot.key));
+    const kept = orderRef.current.filter((key) => wantedKeys.has(key));
+    const known = new Set(kept);
+    const added = wanted
+      .filter((snapshot) => !known.has(snapshot.key))
       .sort((a, b) => a.board - b.board)
       .map((snapshot) => snapshot.key);
+    orderRef.current = [...kept, ...added];
+    return orderRef.current;
   }, [snapshots, target, team]);
+
+  // A new round is a new set of boards; start the order fresh.
+  useEffect(() => {
+    orderRef.current = [];
+  }, [target?.roundId]);
 
   const { games: liveGames } = useTrackedGames(snapshots, selectedKeys);
   const liveActive = useMoments(liveGames, team, momentsEnabled && !demo);

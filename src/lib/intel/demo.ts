@@ -1,4 +1,4 @@
-import { TrackedGame, emptyTrackedGame } from "../../types";
+import { GameResult, TrackedGame, emptyTrackedGame } from "../../types";
 import { Moment, MomentTone } from "./moments";
 
 /** Scripted boards + callouts so the overlay can be previewed without a live round. */
@@ -13,7 +13,8 @@ function board(
   evaluation: number,
   moveNumber: number,
   whiteClock: number,
-  blackClock: number
+  blackClock: number,
+  result: GameResult = null
 ): TrackedGame {
   return {
     ...emptyTrackedGame(white, black),
@@ -27,6 +28,7 @@ function board(
     blackClock,
     turn: "white",
     board: 1,
+    result,
   };
 }
 
@@ -35,7 +37,8 @@ export function demoGames(team: string): TrackedGame[] {
     board("Gukesh D", "Abdusattorov, Nodirbek", team, OPPONENT, 0.8, 23, 3541, 2988),
     board("Sindarov, Javokhir", "Erigaisi Arjun", OPPONENT, team, -1.6, 31, 1210, 2400),
     board("Praggnanandhaa R", "Yakubboev, Nodirbek", team, OPPONENT, 0.1, 18, 4100, 3900),
-    board("Vokhidov, Shamsiddin", "Vidit, Santosh Gujrathi", OPPONENT, team, 2.4, 37, 240, 55),
+    // One decided board, so the result state can be previewed too
+    board("Vokhidov, Shamsiddin", "Vidit, Santosh Gujrathi", OPPONENT, team, 2.4, 37, 240, 55, "0-1"),
   ];
 }
 

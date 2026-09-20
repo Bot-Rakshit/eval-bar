@@ -179,13 +179,12 @@ function formatEval(evaluation: number | null, mateIn: number | null): string {
   return evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1);
 }
 
+/** Once a game is decided the bar and clocks go; only this remains. */
 const RESULT_LABELS: Record<string, string> = {
   "1-0": "1-0",
   "0-1": "0-1",
+  "1/2-1/2": "½-½",
 };
-
-/** What each side scored in a draw — shown on both halves of the bar. */
-const DRAW_HALF = "½";
 
 function formatClock(seconds: number): string {
   if (seconds < 1) return "0:00:00";
@@ -372,23 +371,10 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
   const whiteIsTeam = isTeam(game.whiteTeam, team);
   const blackIsTeam = isTeam(game.blackTeam, team);
 
-  const percent = result
-    ? result === "1-0"
-      ? 100
-      : result === "0-1"
-        ? 0
-        : 50
-    : whitePercent(game.evaluation, game.mateIn);
-  // A draw is the one result both sides share, so rather than one label
-  // reading "½-½" from a single side, each half of the bar carries its own.
-  const drawn = result === "1/2-1/2";
-  const label = result ? RESULT_LABELS[result] : formatEval(game.evaluation, game.mateIn);
+  const percent = whitePercent(game.evaluation, game.mateIn);
+  const label = formatEval(game.evaluation, game.mateIn);
   // Same threshold Chessiro uses, so the label swaps sides only once settled.
   const blackLeads = percent < 49.8;
-  const whiteLabel = drawn ? DRAW_HALF : label;
-  const blackLabel = drawn ? DRAW_HALF : label;
-  const whiteShown = drawn || !blackLeads;
-  const blackShown = drawn || blackLeads;
 
   const liveWhite = turn === "white" && !result ? game.whiteClock - elapsed : game.whiteClock;
   const liveBlack = turn === "black" && !result ? game.blackClock - elapsed : game.blackClock;
@@ -414,34 +400,40 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
           />
         </div>
 
-        <div className="oly-bar">
-          <div className="oly-bar-white" style={{ transform: `scaleX(${percent / 100})` }} />
-          <span
-            className="oly-eval on-white"
-            style={{ opacity: whiteShown ? 1 : 0 }}
-            aria-hidden={!whiteShown}
-          >
-            {whiteLabel}
-          </span>
-          <span
-            className="oly-eval on-black"
-            style={{ opacity: blackShown ? 1 : 0 }}
-            aria-hidden={!blackShown}
-          >
-            {blackLabel}
-          </span>
-        </div>
+        {result ? (
+          <div className="oly-result">{RESULT_LABELS[result] ?? result}</div>
+        ) : (
+          <>
+            <div className="oly-bar">
+              <div className="oly-bar-white" style={{ transform: `scaleX(${percent / 100})` }} />
+              <span
+                className="oly-eval on-white"
+                style={{ opacity: blackLeads ? 0 : 1 }}
+                aria-hidden={blackLeads}
+              >
+                {label}
+              </span>
+              <span
+                className="oly-eval on-black"
+                style={{ opacity: blackLeads ? 1 : 0 }}
+                aria-hidden={!blackLeads}
+              >
+                {label}
+              </span>
+            </div>
 
-        <div className="oly-clocks">
-          <MonoTime
-            text={clockText(liveWhite)}
-            className={`${whiteIsTeam ? "is-team" : ""} ${!clocksUnknown && liveWhite <= 30 ? "is-low" : ""}`}
-          />
-          <MonoTime
-            text={clockText(liveBlack)}
-            className={`${blackIsTeam ? "is-team" : ""} ${!clocksUnknown && liveBlack <= 30 ? "is-low" : ""}`}
-          />
-        </div>
+            <div className="oly-clocks">
+              <MonoTime
+                text={clockText(liveWhite)}
+                className={`${whiteIsTeam ? "is-team" : ""} ${!clocksUnknown && liveWhite <= 30 ? "is-low" : ""}`}
+              />
+              <MonoTime
+                text={clockText(liveBlack)}
+                className={`${blackIsTeam ? "is-team" : ""} ${!clocksUnknown && liveBlack <= 30 ? "is-low" : ""}`}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
