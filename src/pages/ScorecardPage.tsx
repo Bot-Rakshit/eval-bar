@@ -21,10 +21,19 @@ export default function ScorecardPage() {
   const scale = Number(params.get("scale")) || 1.6;
   const demo = params.get("demo") === "1";
   const showProjection = params.get("proj") !== "0";
+  const showFlags = params.get("flags") !== "0";
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
-  const { games: liveGames } = useOlympiadTeam({ section, team, anchorTour, demo });
+  const { sectionInfo, games: liveGames, roundName } = useOlympiadTeam({
+    section,
+    team,
+    anchorTour,
+    demo,
+  });
   const games = demo ? demoGames(team) : liveGames;
+
+  const round = demo ? "Demo" : roundName;
+  const label = params.get("round") === "0" ? null : [sectionInfo.label, round].filter(Boolean).join(" · ");
 
   useEffect(() => {
     document.body.classList.add("team-view");
@@ -38,7 +47,13 @@ export default function ScorecardPage() {
   return (
     <div className={`score-page align-${align}`}>
       <div className="score-scale" style={{ "--score-scale": scale } as React.CSSProperties}>
-        <Scorecard games={games} team={team} showProjection={showProjection} />
+        <Scorecard
+          games={games}
+          team={team}
+          showProjection={showProjection}
+          showFlags={showFlags}
+          label={label}
+        />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { TrackedGame } from "../types";
 import { teamCode } from "../lib/feds";
 import { formatPoints, matchScore, opponentOf } from "../lib/teamScore";
@@ -15,9 +16,52 @@ interface ScorecardProps {
   team: string;
   /** Hide the projection bar and caption; just the score. */
   showProjection?: boolean;
+  /** Hide the flags, for a federation we have no flag for. */
+  showFlags?: boolean;
+  /** Section and round, e.g. "Open · Round 6". Omitted when unknown. */
+  label?: string | null;
 }
 
-export function Scorecard({ games, team, showProjection = true }: ScorecardProps) {
+/** Flags are bundled under /flags, keyed by federation code. */
+function Flag({ code }: { code: string }) {
+  const [failed, setFailed] = useState(false);
+  // Extra teams share a federation's flag: "UZB 2" → UZB.png
+  const file = code.split(" ")[0];
+  if (!file || failed) return <span className="score-flag" />;
+  return (
+    <span className="score-flag">
+      <img src={`/flags/${file}.png`} alt="" onError={() => setFailed(true)} />
+    </span>
+  );
+}
+
+function TeamRow({
+  code,
+  points,
+  isTeam,
+  showFlag,
+}: {
+  code: string;
+  points: string;
+  isTeam: boolean;
+  showFlag: boolean;
+}) {
+  return (
+    <div className={isTeam ? "score-row is-team" : "score-row"}>
+      {showFlag && <Flag code={code} />}
+      <span className="score-code">{code || "—"}</span>
+      <span className="score-points">{points}</span>
+    </div>
+  );
+}
+
+export function Scorecard({
+  games,
+  team,
+  showProjection = true,
+  showFlags = true,
+  label = null,
+}: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
   const projection = projectedRaw(games, team);
@@ -38,18 +82,25 @@ export function Scorecard({ games, team, showProjection = true }: ScorecardProps
 
   return (
     <div className="score-card">
-      <div className="score-head">
-        <span className="score-code is-team">{teamCode(team) || "—"}</span>
-        <span className="score-value">
-          {formatPoints(score.us)}
-          <span className="score-dash">–</span>
-          {formatPoints(score.them)}
-        </span>
-        <span className="score-code is-them">{opponent ? teamCode(opponent) : "—"}</span>
+      {label && <div className="score-label">{label}</div>}
+
+      <div className="score-teams">
+        <TeamRow
+          code={teamCode(team)}
+          points={formatPoints(score.us)}
+          isTeam
+          showFlag={showFlags}
+        />
+        <TeamRow
+          code={opponent ? teamCode(opponent) : ""}
+          points={formatPoints(score.them)}
+          isTeam={false}
+          showFlag={showFlags}
+        />
       </div>
 
       {showProjection && (
-        <>
+        <div className="score-projection">
           <div className="score-bar">
             <div className="score-bar-us" style={{ transform: `scaleX(${usShare})` }} />
             <div className="score-bar-half" />
@@ -62,7 +113,7 @@ export function Scorecard({ games, team, showProjection = true }: ScorecardProps
               </span>
             )}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

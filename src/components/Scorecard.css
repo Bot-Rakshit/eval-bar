@@ -1,4 +1,4 @@
-/* Olympiad match scorecard — a small box for the corner of a broadcast. */
+/* Olympiad match scorecard — a small square box for the corner of a broadcast. */
 
 .score-card {
   --card-fill: #071a30;
@@ -7,7 +7,7 @@
 
   --code: #ffffff;
   --code-team: #e4c372;
-  --score: #ffffff;
+  --points: #ffffff;
   --caption: rgba(243, 234, 208, 0.6);
 
   /* The projection bar, same two tones as the board cards' eval bar */
@@ -15,24 +15,71 @@
   --bar-them: #2c2717;
 
   box-sizing: border-box;
-  width: 300px;
-  padding: 13px 16px 12px;
+  width: 208px;
+  padding: 17px 16px 16px;
   border-radius: 12px;
   background: var(--card-fill);
   box-shadow: inset 0 0 0 1px var(--card-stroke);
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 13px;
 }
 
-/* ---------- Codes and the live score ---------- */
+/* ---------- Section and round ---------- */
 
-.score-head {
+.score-label {
+  font-family: "Outfit", var(--app-font);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--caption);
+  text-align: center;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--hairline);
+  /* Clipped rather than wrapped: a long round name must not change the
+     box's height on air. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- The two teams ---------- */
+
+.score-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.score-row {
   display: grid;
-  /* The score column is fixed so the codes never shift as points land */
-  grid-template-columns: 1fr auto 1fr;
-  align-items: baseline;
+  /* Fixed flag and points columns, so the codes line up and the points do
+     not shift the row as they go from "2" to "2½". */
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
   gap: 10px;
+}
+
+.score-flag {
+  width: 32px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Flags are not all the same shape — Nepal is a pennant, Switzerland a square —
+   so each sits at its own aspect inside the fixed box rather than being
+   cropped to fill it. */
+.score-flag img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
 .score-code {
@@ -45,36 +92,37 @@
   white-space: nowrap;
 }
 
-.score-code.is-them {
-  text-align: right;
-}
-
-.score-code.is-team {
+.score-row.is-team .score-code {
   color: var(--code-team);
 }
 
-.score-value {
+.score-points {
   font-family: "Sora", var(--app-font);
   font-weight: 800;
   font-size: 23px;
   line-height: 1;
-  color: var(--score);
+  color: var(--points);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  /* Holds the column at the width of the widest score, so a half point
+     landing does not nudge the codes. */
+  min-width: 1.1em;
+  text-align: right;
 }
 
-.score-value .score-dash {
-  /* The en dash carries more air than the digits want */
-  padding: 0 3px;
-  opacity: 0.55;
-}
+/* ---------- Projection ---------- */
 
-/* ---------- Projection bar ---------- */
+.score-projection {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 15px;
+  border-top: 1px solid var(--hairline);
+}
 
 .score-bar {
   position: relative;
-  height: 15px;
-  border-radius: 7px;
+  height: 16px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--bar-them);
   box-shadow: inset 0 0 0 1px var(--hairline);
@@ -103,13 +151,13 @@
 .score-caption {
   display: flex;
   align-items: baseline;
-  justify-content: center;
+  justify-content: space-between;
   gap: 7px;
   font-family: "Outfit", var(--app-font);
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--caption);
 }
