@@ -24,16 +24,8 @@ export default function ScorecardPage() {
   const showFlags = params.get("flags") !== "0";
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
-  const { sectionInfo, games: liveGames, roundName } = useOlympiadTeam({
-    section,
-    team,
-    anchorTour,
-    demo,
-  });
+  const { games: liveGames } = useOlympiadTeam({ section, team, anchorTour, demo });
   const games = demo ? demoGames(team) : liveGames;
-
-  const round = demo ? "Demo" : roundName;
-  const label = params.get("round") === "0" ? null : [sectionInfo.label, round].filter(Boolean).join(" · ");
 
   useEffect(() => {
     document.body.classList.add("team-view");
@@ -52,7 +44,6 @@ export default function ScorecardPage() {
           team={team}
           showProjection={showProjection}
           showFlags={showFlags}
-          label={label}
         />
       </div>
     </div>

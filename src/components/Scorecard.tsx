@@ -18,8 +18,6 @@ interface ScorecardProps {
   showProjection?: boolean;
   /** Hide the flags, for a federation we have no flag for. */
   showFlags?: boolean;
-  /** Section and round, e.g. "Open · Round 6". Omitted when unknown. */
-  label?: string | null;
 }
 
 /** Flags are bundled under /flags, keyed by federation code. */
@@ -60,7 +58,6 @@ export function Scorecard({
   team,
   showProjection = true,
   showFlags = true,
-  label = null,
 }: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
@@ -82,8 +79,6 @@ export function Scorecard({
 
   return (
     <div className="score-card">
-      {label && <div className="score-label">{label}</div>}
-
       <div className="score-teams">
         <TeamRow
           code={teamCode(team)}
