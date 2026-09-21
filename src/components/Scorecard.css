@@ -1,0 +1,148 @@
+/* Olympiad match scorecard — a small box for the corner of a broadcast. */
+
+.score-card {
+  --card-fill: #071a30;
+  --card-stroke: #ebc463;
+  --hairline: rgba(235, 196, 99, 0.3);
+
+  --code: #ffffff;
+  --code-team: #e4c372;
+  --score: #ffffff;
+  --caption: rgba(243, 234, 208, 0.6);
+
+  /* The projection bar, same two tones as the board cards' eval bar */
+  --bar-us: #f9f1da;
+  --bar-them: #2c2717;
+
+  box-sizing: border-box;
+  width: 300px;
+  padding: 13px 16px 12px;
+  border-radius: 12px;
+  background: var(--card-fill);
+  box-shadow: inset 0 0 0 1px var(--card-stroke);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* ---------- Codes and the live score ---------- */
+
+.score-head {
+  display: grid;
+  /* The score column is fixed so the codes never shift as points land */
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.score-code {
+  font-family: "Outfit", var(--app-font);
+  font-weight: 700;
+  font-size: 21px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--code);
+  white-space: nowrap;
+}
+
+.score-code.is-them {
+  text-align: right;
+}
+
+.score-code.is-team {
+  color: var(--code-team);
+}
+
+.score-value {
+  font-family: "Sora", var(--app-font);
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1;
+  color: var(--score);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.score-value .score-dash {
+  /* The en dash carries more air than the digits want */
+  padding: 0 3px;
+  opacity: 0.55;
+}
+
+/* ---------- Projection bar ---------- */
+
+.score-bar {
+  position: relative;
+  height: 15px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--bar-them);
+  box-shadow: inset 0 0 0 1px var(--hairline);
+}
+
+/* scaleX so the fill moves on the compositor rather than by re-layout */
+.score-bar-us {
+  position: absolute;
+  inset: 0;
+  background: var(--bar-us);
+  transform-origin: left center;
+  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Halfway mark: which side of it the fill sits on is the whole story */
+.score-bar-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: rgba(7, 26, 48, 0.55);
+}
+
+.score-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  font-family: "Outfit", var(--app-font);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--caption);
+}
+
+.score-caption-value {
+  font-family: "Sora", var(--app-font);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--bar-us);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Page shell ---------- */
+
+.score-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.score-page.align-top {
+  align-items: flex-start;
+}
+
+.score-page.align-bottom {
+  align-items: flex-end;
+}
+
+/* Authored small and zoomed as a whole, so the type scales with the box */
+.score-scale {
+  zoom: var(--score-scale, 1.6);
+}

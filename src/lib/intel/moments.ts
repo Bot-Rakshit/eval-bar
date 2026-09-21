@@ -173,7 +173,15 @@ export function detectMoments(game: TrackedGame, memory: BoardMemory, team: stri
 }
 
 /** Projected match score from live evals (finished games count as played). */
-export function projectedScore(games: TrackedGame[], team: string): { us: number; them: number } | null {
+/**
+ * Expected match score, unrounded: decided games count their real result, live
+ * ones their win probability. `live` is how many games are still being
+ * projected — none, and there is nothing to project.
+ */
+export function projectedRaw(
+  games: TrackedGame[],
+  team: string
+): { us: number; them: number; live: number } {
   let us = 0;
   let them = 0;
   let live = 0;
@@ -195,7 +203,13 @@ export function projectedScore(games: TrackedGame[], team: string): { us: number
     us += teamIsWhite ? white : 1 - white;
     them += teamIsWhite ? 1 - white : white;
   }
-  if (live === 0) return null;
+  return { us, them, live };
+}
+
+/** The same projection rounded to half points, for display. */
+export function projectedScore(games: TrackedGame[], team: string): { us: number; them: number } | null {
+  const raw = projectedRaw(games, team);
+  if (raw.live === 0) return null;
   const roundHalf = (value: number) => Math.round(value * 2) / 2;
-  return { us: roundHalf(us), them: roundHalf(them) };
+  return { us: roundHalf(raw.us), them: roundHalf(raw.them) };
 }

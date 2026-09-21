@@ -1,48 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { TrackedGame } from "../types";
-import { useRoundStream } from "../hooks/useRoundStream";
-import { useTeamRound, teamMatches } from "../hooks/useTeamRound";
-import { useTrackedGames } from "../hooks/useTrackedGames";
 import OlympiadGrid from "../components/OlympiadGrid";
 import { ActiveMoment, useMoments } from "../hooks/useMoments";
 import { projectedScore } from "../lib/intel/moments";
+import { DEFAULT_TEAM, OLYMPIAD_ANCHOR_TOUR, useOlympiadTeam } from "../hooks/useOlympiadTeam";
+import { formatPoints, matchScore, opponentOf } from "../lib/teamScore";
 import { DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
-
-/** Any tour in the Olympiad group — the group lists every section. */
-const OLYMPIAD_ANCHOR_TOUR = "n1pPI5Q0";
-const DEFAULT_TEAM = "India";
-
-const SECTIONS: Record<string, { prefix: string; label: string }> = {
-  open: { prefix: "Open", label: "Open" },
-  women: { prefix: "Women", label: "Women" },
-};
-
-function formatPoints(points: number): string {
-  const whole = Math.floor(points);
-  const half = points - whole >= 0.5;
-  if (whole === 0 && half) return "½";
-  return half ? `${whole}½` : `${whole}`;
-}
-
-/** Match score from the team's perspective; only decided games count. */
-function matchScore(games: TrackedGame[], team: string): { us: number; them: number } {
-  let us = 0;
-  let them = 0;
-  for (const game of games) {
-    if (!game.result) continue;
-    const teamIsWhite = teamMatches(game.whiteTeam, team);
-    if (game.result === "1/2-1/2") {
-      us += 0.5;
-      them += 0.5;
-    } else if ((game.result === "1-0") === teamIsWhite) {
-      us += 1;
-    } else {
-      them += 1;
-    }
-  }
-  return { us, them };
-}
 
 /** ?demo=1 — scripted boards cycling through every callout, for previewing the look. */
 function useDemo(team: string, enabled: boolean): { games: TrackedGame[]; active: ActiveMoment | null } {
@@ -100,7 +64,6 @@ function MomentTakeover({ active }: { active: ActiveMoment }) {
 export default function TeamPage() {
   const { section = "open" } = useParams<{ section: string }>();
   const [params] = useSearchParams();
-  const sectionInfo = SECTIONS[section.toLowerCase()] ?? SECTIONS.open;
   const team = params.get("team")?.trim() || DEFAULT_TEAM;
   // Default is chroma green for keying; ?bg=1 previews on the Olympiad backdrop,
   // ?bg=transparent relies on OBS browser-source alpha instead.
@@ -112,8 +75,12 @@ export default function TeamPage() {
   // Any tour id inside another team event's broadcast group works here
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
-  const { target, error } = useTeamRound(demo ? "" : anchorTour, sectionInfo.prefix, team);
-  const { snapshots } = useRoundStream(target?.roundId ?? null);
+  const { sectionInfo, games: liveGames, roundName, error } = useOlympiadTeam({
+    section,
+    team,
+    anchorTour,
+    demo,
+  });
 
   useEffect(() => {
     document.body.classList.add("team-view");
@@ -124,51 +91,12 @@ export default function TeamPage() {
     };
   }, [bgMode]);
 
-  // Prefer PGN team tags; fall back to the names discovered from the round API.
-  //
-  // The order is locked the first time a game shows up. `board` is not stable
-  // across updates — the round API seeds it with the game's index in the whole
-  // round, then the PGN stream overwrites it with the Round-tag suffix, one board
-  // at a time — so re-sorting on every snapshot made the cards hop around.
-  const orderRef = useRef<string[]>([]);
-  const selectedKeys = useMemo((): string[] => {
-    const players = target?.players ?? [];
-    const wanted = Array.from(snapshots.values()).filter(
-      (snapshot) =>
-        teamMatches(snapshot.whiteTeam, team) ||
-        teamMatches(snapshot.blackTeam, team) ||
-        players.includes(snapshot.whitePlayer) ||
-        players.includes(snapshot.blackPlayer)
-    );
-    const wantedKeys = new Set(wanted.map((snapshot) => snapshot.key));
-    const kept = orderRef.current.filter((key) => wantedKeys.has(key));
-    const known = new Set(kept);
-    const added = wanted
-      .filter((snapshot) => !known.has(snapshot.key))
-      .sort((a, b) => a.board - b.board)
-      .map((snapshot) => snapshot.key);
-    orderRef.current = [...kept, ...added];
-    return orderRef.current;
-  }, [snapshots, target, team]);
-
-  // A new round is a new set of boards; start the order fresh.
-  useEffect(() => {
-    orderRef.current = [];
-  }, [target?.roundId]);
-
-  const { games: liveGames } = useTrackedGames(snapshots, selectedKeys);
   const liveActive = useMoments(liveGames, team, momentsEnabled && !demo);
   const demoState = useDemo(team, demo);
   const games = demo ? demoState.games : liveGames;
   const active = demo ? demoState.active : liveActive;
 
-  const opponent = useMemo(() => {
-    for (const game of games) {
-      if (game.whiteTeam && !teamMatches(game.whiteTeam, team)) return game.whiteTeam;
-      if (game.blackTeam && !teamMatches(game.blackTeam, team)) return game.blackTeam;
-    }
-    return "";
-  }, [games, team]);
+  const opponent = useMemo(() => opponentOf(games, team), [games, team]);
 
   const score = matchScore(games, team);
   const projected = momentsEnabled ? projectedScore(games, team) : null;
@@ -192,7 +120,7 @@ export default function TeamPage() {
         )}
         <span className="team-header-meta">
           {sectionInfo.label}
-          {target ? ` · ${target.roundName}` : demo ? " · Demo" : ""}
+          {roundName ? ` · ${roundName}` : demo ? " · Demo" : ""}
         </span>
         {projected && opponent && (
           <span className="team-header-projected">

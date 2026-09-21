@@ -26,6 +26,14 @@ export default function LandingPage() {
             <h2>Olympiad · India Women</h2>
             <p>Auto-follows the Indian women's team through every round.</p>
           </a>
+          <a href="scorecard/men" className="landing-product">
+            <h2>Scorecard · India Open</h2>
+            <p>Small match box: IND v opponent, the score, and the projected result.</p>
+          </a>
+          <a href="scorecard/women" className="landing-product">
+            <h2>Scorecard · India Women</h2>
+            <p>The same box for the women's match, sized for a corner of the frame.</p>
+          </a>
           <a href="ccm" className="landing-product">
             <h2>Chat Chess Moves</h2>
             <p>Engage your audience with interactive chess puzzles in the chat.</p>
