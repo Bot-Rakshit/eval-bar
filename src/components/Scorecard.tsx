@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TrackedGame } from "../types";
 import { teamCode } from "../lib/feds";
-import { formatPoints, matchEvalShare, matchScore, opponentOf } from "../lib/teamScore";
+import { matchEvalShare, matchScore, opponentOf } from "../lib/teamScore";
 import "./Scorecard.css";
 
 /**
@@ -35,26 +35,36 @@ function Flag({ code }: { code: string }) {
   );
 }
 
-function TeamRow({
-  code,
-  points,
-  isTeam,
-  showFlag,
-}: {
-  code: string;
-  points: string;
-  isTeam: boolean;
-  showFlag: boolean;
-}) {
+/**
+ * A score with its half point a size down ("2" + small "½"), the scoreboard
+ * way — it keeps "2½–1½" compact. A lone half stays full size.
+ */
+function Points({ value }: { value: number }) {
+  const whole = Math.floor(value);
+  const half = value - whole >= 0.5;
+  if (whole === 0 && half) return <>½</>;
   return (
-    <div className={isTeam ? "score-row is-team" : "score-row"}>
+    <>
+      {whole}
+      {half && <span className="score-half">½</span>}
+    </>
+  );
+}
+
+/** One side of the match: the flag with the federation code beneath it. */
+function Side({ code, isTeam, showFlag }: { code: string; isTeam: boolean; showFlag: boolean }) {
+  return (
+    <div className={isTeam ? "score-side is-team" : "score-side"}>
       {showFlag && <Flag code={code} />}
       <span className="score-code">{code || "—"}</span>
-      <span className="score-points">{points}</span>
     </div>
   );
 }
 
+/**
+ * The followed team on the left, the opponent on the right — the same sides as
+ * the board cards and the bar beneath, so the eye never has to swap.
+ */
 export function Scorecard({
   games,
   team,
@@ -69,13 +79,19 @@ export function Scorecard({
   return (
     <div className="score-card">
       {section && <span className="score-tab">{section}</span>}
-      <TeamRow code={teamCode(team)} points={formatPoints(score.us)} isTeam showFlag={showFlags} />
-      <TeamRow
-        code={opponent ? teamCode(opponent) : ""}
-        points={formatPoints(score.them)}
-        isTeam={false}
-        showFlag={showFlags}
-      />
+      <div className="score-match">
+        <Side code={teamCode(team)} isTeam showFlag={showFlags} />
+        <div className="score-result">
+          <span className="score-points is-us">
+            <Points value={score.us} />
+          </span>
+          <span className="score-dash">–</span>
+          <span className="score-points is-them">
+            <Points value={score.them} />
+          </span>
+        </div>
+        <Side code={opponent ? teamCode(opponent) : ""} isTeam={false} showFlag={showFlags} />
+      </div>
 
       {showProjection && (
         <div className="score-bar" aria-label="Match eval">
