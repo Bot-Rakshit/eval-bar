@@ -14,6 +14,8 @@ function board(
   moveNumber: number,
   whiteClock: number,
   blackClock: number,
+  whiteElo: number,
+  blackElo: number,
   result: GameResult = null
 ): TrackedGame {
   return {
@@ -28,17 +30,20 @@ function board(
     blackClock,
     turn: "white",
     board: 1,
+    whiteElo,
+    blackElo,
     result,
   };
 }
 
 export function demoGames(team: string): TrackedGame[] {
   return [
-    board("Gukesh D", "Abdusattorov, Nodirbek", team, OPPONENT, 0.8, 23, 3541, 2988),
-    board("Sindarov, Javokhir", "Erigaisi Arjun", OPPONENT, team, -1.6, 31, 1210, 2400),
-    board("Praggnanandhaa R", "Yakubboev, Nodirbek", team, OPPONENT, 0.1, 18, 4100, 3900),
+    // Ratings are the players' real ones from the 46th Olympiad PGNs
+    board("Gukesh D", "Abdusattorov, Nodirbek", team, OPPONENT, 0.8, 23, 3541, 2988, 2703, 2762),
+    board("Sindarov, Javokhir", "Erigaisi Arjun", OPPONENT, team, -1.6, 31, 1210, 2400, 2778, 2759),
+    board("Praggnanandhaa R", "Yakubboev, Nodirbek", team, OPPONENT, 0.1, 18, 4100, 3900, 2761, 2685),
     // One decided board, so the result state can be previewed too
-    board("Vokhidov, Shamsiddin", "Vidit, Santosh Gujrathi", OPPONENT, team, 2.4, 37, 240, 55, "0-1"),
+    board("Vokhidov, Shamsiddin", "Vidit, Santosh Gujrathi", OPPONENT, team, 2.4, 37, 240, 55, 2654, 2697, "0-1"),
   ];
 }
 

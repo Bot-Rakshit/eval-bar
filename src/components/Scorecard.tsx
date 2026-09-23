@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { TrackedGame } from "../types";
 import { teamCode } from "../lib/feds";
 import { formatPoints, matchScore, opponentOf } from "../lib/teamScore";
@@ -7,16 +7,16 @@ import "./Scorecard.css";
 
 /**
  * A match at a glance: the two federations, the points already on the board,
- * and a bar for where the round is heading if the live games land the way the
- * engine currently sees them.
+ * and a bar for where the match is heading — the projected split printed in
+ * its two ends.
  */
 
 interface ScorecardProps {
   games: TrackedGame[];
   team: string;
-  /** Hide the projection bar and caption; just the score. */
+  /** Hide the projection bar; just the score. */
   showProjection?: boolean;
-  /** Hide the flags, for a federation we have no flag for. */
+  /** Hide the flags. */
   showFlags?: boolean;
 }
 
@@ -53,60 +53,48 @@ function TeamRow({
   );
 }
 
-export function Scorecard({
-  games,
-  team,
-  showProjection = true,
-  showFlags = true,
-}: ScorecardProps) {
+const roundHalf = (value: number) => Math.round(value * 2) / 2;
+
+export function Scorecard({ games, team, showProjection = true, showFlags = true }: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
   const projection = projectedRaw(games, team);
 
-  const decided = games.filter((game) => game.result).length;
-  const complete = games.length > 0 && decided === games.length;
-  const projecting = projection.live > 0;
-
   const total = projection.us + projection.them;
-  // Before any game is on the board there is nothing to weigh, so sit level.
-  const usShare = total > 0 && (projecting || complete) ? projection.us / total : 0.5;
+  // No pairing yet means nothing to weigh, so the bar sits level and blank.
+  const paired = games.length > 0 && total > 0;
+  const share = paired ? projection.us / total : 0.5;
+  const pct = `${(share * 100).toFixed(2)}%`;
 
-  // With nothing running and nothing decided, every board is still notionally
-  // a draw — printing that as a projection would read as a real 2-2, so the
-  // number is held back until there is something behind it.
-  const caption = projecting ? "Projected" : complete ? "Final" : games.length > 0 ? "Not started" : "No pairing";
-  const roundHalf = (value: number) => Math.round(value * 2) / 2;
+  const split = paired && (
+    <>
+      <span>{formatPoints(roundHalf(projection.us))}</span>
+      <span>{formatPoints(roundHalf(projection.them))}</span>
+    </>
+  );
 
   return (
     <div className="score-card">
-      <div className="score-teams">
-        <TeamRow
-          code={teamCode(team)}
-          points={formatPoints(score.us)}
-          isTeam
-          showFlag={showFlags}
-        />
-        <TeamRow
-          code={opponent ? teamCode(opponent) : ""}
-          points={formatPoints(score.them)}
-          isTeam={false}
-          showFlag={showFlags}
-        />
-      </div>
+      <TeamRow code={teamCode(team)} points={formatPoints(score.us)} isTeam showFlag={showFlags} />
+      <TeamRow
+        code={opponent ? teamCode(opponent) : ""}
+        points={formatPoints(score.them)}
+        isTeam={false}
+        showFlag={showFlags}
+      />
 
       {showProjection && (
-        <div className="score-projection">
-          <div className="score-bar">
-            <div className="score-bar-us" style={{ transform: `scaleX(${usShare})` }} />
-            <div className="score-bar-half" />
+        <div className="score-bar" aria-label="Projected match score">
+          <div className="score-bar-us" style={{ transform: `scaleX(${share})` }} />
+          <div className="score-bar-half" />
+          <div
+            className="score-bar-text on-us"
+            style={{ clipPath: `inset(0 calc(100% - ${pct}) 0 0)` } as React.CSSProperties}
+          >
+            {split}
           </div>
-          <div className="score-caption">
-            <span>{caption}</span>
-            {(projecting || complete) && (
-              <span className="score-caption-value">
-                {formatPoints(roundHalf(projection.us))}–{formatPoints(roundHalf(projection.them))}
-              </span>
-            )}
+          <div className="score-bar-text on-them" style={{ clipPath: `inset(0 0 0 ${pct})` }}>
+            {split}
           </div>
         </div>
       )}

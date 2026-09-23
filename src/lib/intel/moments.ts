@@ -1,7 +1,13 @@
 import { TrackedGame } from "../../types";
 import { formatPlayerName } from "../playerName";
 import { plyFromFen, whiteToMove } from "./material";
-import { classifyMove, LOSING_MAX_PERCENT, winPercentage, WINNING_MIN_PERCENT } from "./winPercentage";
+import {
+  classifyMove,
+  expectedScoreWhite,
+  LOSING_MAX_PERCENT,
+  winPercentage,
+  WINNING_MIN_PERCENT,
+} from "./winPercentage";
 
 /**
  * A "moment" is a short on-air callout derived from what just happened on a
@@ -174,9 +180,9 @@ export function detectMoments(game: TrackedGame, memory: BoardMemory, team: stri
 
 /** Projected match score from live evals (finished games count as played). */
 /**
- * Expected match score, unrounded: decided games count their real result, live
- * ones their win probability. `live` is how many games are still being
- * projected — none, and there is nothing to project.
+ * Expected match score, unrounded: decided games count their real result, the
+ * rest their projected expected score (see expectedScoreWhite). `live` is how
+ * many games are still undecided — none, and there is nothing to project.
  */
 export function projectedRaw(
   games: TrackedGame[],
@@ -187,19 +193,13 @@ export function projectedRaw(
   let live = 0;
   for (const game of games) {
     const teamIsWhite = isTeam(game.whiteTeam, team);
+    let white: number;
     if (game.result) {
-      const white = game.result === "1-0" ? 1 : game.result === "0-1" ? 0 : 0.5;
-      us += teamIsWhite ? white : 1 - white;
-      them += teamIsWhite ? 1 - white : white;
-      continue;
+      white = game.result === "1-0" ? 1 : game.result === "0-1" ? 0 : 0.5;
+    } else {
+      live += 1;
+      white = expectedScoreWhite(game.evaluation, game.mateIn, game.whiteElo, game.blackElo, game.moveNumber);
     }
-    if (game.evaluation === null && game.mateIn === null) {
-      us += 0.5;
-      them += 0.5;
-      continue;
-    }
-    live += 1;
-    const white = winPercentage(game.evaluation, game.mateIn) / 100;
     us += teamIsWhite ? white : 1 - white;
     them += teamIsWhite ? 1 - white : white;
   }

@@ -1,6 +1,6 @@
 import { emptyTrackedGame, TrackedGame } from "../../types";
 import { detectMoments, freshMemory, projectedScore } from "./moments";
-import { classifyMove, winPercentageFromCp } from "./winPercentage";
+import { classifyMove, expectedScoreWhite, winPercentageFromCp } from "./winPercentage";
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
@@ -69,5 +69,32 @@ describe("projectedScore", () => {
   it("combines finished results with live win chances", () => {
     const games = [game({ result: "1-0" }), game({ evaluation: 0 })];
     expect(projectedScore(games, "India")).toEqual({ us: 1.5, them: 0.5 });
+  });
+});
+
+describe("expectedScoreWhite", () => {
+  it("matches the fitted model", () => {
+    // Gukesh (2703) v Abdusattorov (2762), +0.8 at move 23 — reference value from the Python fit
+    expect(expectedScoreWhite(0.8, null, 2703, 2762, 23)).toBeCloseTo(0.5751, 3);
+  });
+
+  it("gives a big rating gap most of the points from an equal start", () => {
+    expect(expectedScoreWhite(0, null, 2760, 2360, 1)).toBeCloseTo(0.918, 2);
+  });
+
+  it("fades the rating term as the game goes on", () => {
+    const early = expectedScoreWhite(0, null, 2760, 2360, 1);
+    const late = expectedScoreWhite(0, null, 2760, 2360, 60);
+    expect(late).toBeLessThan(early);
+    expect(late).toBeGreaterThan(0.5);
+  });
+
+  it("ignores ratings when either is unknown", () => {
+    expect(expectedScoreWhite(0.5, null, 2760, 0, 10)).toBeCloseTo(expectedScoreWhite(0.5, null, 0, 0, 10));
+  });
+
+  it("treats a found mate as decided", () => {
+    expect(expectedScoreWhite(null, 3, 2000, 2800, 30)).toBe(1);
+    expect(expectedScoreWhite(null, -2, 2800, 2000, 30)).toBe(0);
   });
 });

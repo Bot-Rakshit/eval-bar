@@ -101,6 +101,8 @@ export function parseSnapshotFromPgn(pgn: string): GameSnapshot | null {
     whiteTeam: readHeader(pgn, "WhiteTeam") ?? "",
     blackTeam: readHeader(pgn, "BlackTeam") ?? "",
     board: boardMatch ? Number(boardMatch[1]) : 0,
+    whiteElo: Number(readHeader(pgn, "WhiteElo")) || 0,
+    blackElo: Number(readHeader(pgn, "BlackElo")) || 0,
   };
 }
 
@@ -136,6 +138,8 @@ export function snapshotFromApiGame(game: ApiRoundGame, board = 0): GameSnapshot
     whiteTeam: game.players?.[0]?.team ?? "",
     blackTeam: game.players?.[1]?.team ?? "",
     board,
+    whiteElo: game.players?.[0]?.rating ?? 0,
+    blackElo: game.players?.[1]?.rating ?? 0,
   };
 }
 

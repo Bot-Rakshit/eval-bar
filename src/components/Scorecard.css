@@ -1,4 +1,4 @@
-/* Olympiad match scorecard — a small square box for the corner of a broadcast. */
+/* Olympiad match scorecard — as small as it can be with the score still big. */
 
 .score-card {
   --card-fill: #071a30;
@@ -8,30 +8,22 @@
   --code: #ffffff;
   --code-team: #e4c372;
   --points: #ffffff;
-  --caption: rgba(243, 234, 208, 0.6);
 
   /* The projection bar, same two tones as the board cards' eval bar */
   --bar-us: #f9f1da;
   --bar-them: #2c2717;
+  --on-us: #071a30;
+  --on-them: #f9f1da;
 
   box-sizing: border-box;
-  width: 208px;
-  padding: 13px 15px 12px;
-  border-radius: 12px;
+  width: 164px;
+  padding: 10px 12px 11px;
+  border-radius: 11px;
   background: var(--card-fill);
   box-shadow: inset 0 0 0 1px var(--card-stroke);
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
 }
 
 /* ---------- The two teams ---------- */
-
-.score-teams {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
 .score-row {
   display: grid;
@@ -39,12 +31,16 @@
      not shift the row as they go from "2" to "2½". */
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.score-row + .score-row {
+  margin-top: 3px;
 }
 
 .score-flag {
-  width: 34px;
-  height: 23px;
+  width: 28px;
+  height: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,7 +61,7 @@
 .score-code {
   font-family: "Outfit", var(--app-font);
   font-weight: 700;
-  font-size: 25px;
+  font-size: 19px;
   line-height: 1;
   letter-spacing: 0.05em;
   color: var(--code);
@@ -79,7 +75,7 @@
 .score-points {
   font-family: "Sora", var(--app-font);
   font-weight: 800;
-  font-size: 27px;
+  font-size: 28px;
   line-height: 1;
   color: var(--points);
   font-variant-numeric: tabular-nums;
@@ -89,20 +85,13 @@
   text-align: right;
 }
 
-/* ---------- Projection ---------- */
-
-.score-projection {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding-top: 11px;
-  border-top: 1px solid var(--hairline);
-}
+/* ---------- Projection bar ---------- */
 
 .score-bar {
   position: relative;
-  height: 14px;
-  border-radius: 7px;
+  margin-top: 8px;
+  height: 16px;
+  border-radius: 5px;
   overflow: hidden;
   background: var(--bar-them);
   box-shadow: inset 0 0 0 1px var(--hairline);
@@ -128,27 +117,33 @@
   background: rgba(7, 26, 48, 0.55);
 }
 
-.score-caption {
+/*
+ * The projected split, printed inside the bar ends. It is drawn twice — once
+ * in the dark ink clipped to the filled side, once in the light ink clipped to
+ * the rest — so either number stays legible whichever side of the fill edge it
+ * lands on, even at a lopsided split.
+ */
+.score-bar-text {
+  position: absolute;
+  inset: 0;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 7px;
-  font-family: "Outfit", var(--app-font);
-  font-weight: 600;
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--caption);
-}
-
-.score-caption-value {
+  padding: 0 6px;
   font-family: "Sora", var(--app-font);
   font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  color: var(--bar-us);
+  font-size: 11px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  transition: clip-path 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.score-bar-text.on-us {
+  color: var(--on-us);
+}
+
+.score-bar-text.on-them {
+  color: var(--on-them);
 }
 
 /* ---------- Page shell ---------- */

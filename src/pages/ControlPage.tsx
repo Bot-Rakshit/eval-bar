@@ -35,6 +35,8 @@ const EXAMPLE_SNAPSHOT: GameSnapshot = {
   whiteTeam: "",
   blackTeam: "",
   board: 0,
+  whiteElo: 0,
+  blackElo: 0,
 };
 const EXAMPLE_SNAPSHOTS = new Map<string, GameSnapshot>([[EXAMPLE_SNAPSHOT.key, EXAMPLE_SNAPSHOT]]);
 const EMPTY_SNAPSHOTS = new Map<string, GameSnapshot>();

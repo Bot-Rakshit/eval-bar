@@ -27,7 +27,7 @@ interface ApiTournamentListEntry {
 export interface ApiRoundGame {
   name: string;
   fen?: string;
-  players?: Array<{ name?: string; clock?: number; team?: string; fed?: string }>;
+  players?: Array<{ name?: string; clock?: number; team?: string; fed?: string; rating?: number }>;
   status?: string;
 }
 

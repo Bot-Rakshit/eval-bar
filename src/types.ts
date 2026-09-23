@@ -17,6 +17,9 @@ export interface GameSnapshot {
   blackTeam: string;
   /** Board number within the round (0 when unknown). */
   board: number;
+  /** FIDE ratings, 0 when the source did not carry them. */
+  whiteElo: number;
+  blackElo: number;
 }
 
 export interface TrackedGame extends GameSnapshot {
@@ -130,6 +133,8 @@ export function emptyTrackedGame(whitePlayer: string, blackPlayer: string): Trac
     whiteTeam: "",
     blackTeam: "",
     board: 0,
+    whiteElo: 0,
+    blackElo: 0,
     evaluation: null,
     mateIn: null,
     depth: 0,
@@ -141,6 +146,10 @@ export function emptyTrackedGame(whitePlayer: string, blackPlayer: string): Trac
 export function snapshotToTracked(snapshot: GameSnapshot, previous?: TrackedGame): TrackedGame {
   return {
     ...snapshot,
+    // The round API carries ratings and the PGN stream sometimes does not;
+    // a later update without them must not wipe the ones already known.
+    whiteElo: snapshot.whiteElo || previous?.whiteElo || 0,
+    blackElo: snapshot.blackElo || previous?.blackElo || 0,
     evaluation: previous?.evaluation ?? null,
     mateIn: previous?.mateIn ?? null,
     depth: previous?.depth ?? 0,
