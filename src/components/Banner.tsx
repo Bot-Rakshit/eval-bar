@@ -7,9 +7,9 @@ import "./Banner.css";
 
 const LEAVE_MS = 320;
 
-function Flag({ team, className }: { team: string; className: string }) {
+function Flag({ team, className, fed }: { team: string; className: string; fed?: string }) {
   const [failed, setFailed] = useState(false);
-  const file = teamCode(team).split(" ")[0];
+  const file = fed || teamCode(team).split(" ")[0];
   if (!file || failed) return <span className={className} />;
   return (
     <span className={className}>
@@ -93,6 +93,18 @@ export function MomentBanner({ active, board }: { active: ActiveMoment; board: n
   );
 }
 
+/**
+ * The team's short code. chess-results gives the federation, which is the
+ * right answer — except that a host's extra teams share it, so "Uzbekistan 2"
+ * keeps its number ("UZB 2"). Without a federation (the Lichess fallback) the
+ * code comes from the name.
+ */
+function codeOf(row: StandingRow): string {
+  if (!row.fed) return teamCode(row.name);
+  const extra = row.name.match(/\s(\d+)$/);
+  return extra ? `${row.fed} ${extra[1]}` : row.fed;
+}
+
 /** 1 → "st", 2 → "nd", 11 → "th", 22 → "nd" */
 function ordinalSuffix(n: number): string {
   const lastTwo = n % 100;
@@ -113,8 +125,8 @@ function StandingEntry({ row, shared, isTeam }: { row: StandingRow; shared: bool
         {row.rank}
         <small>{ordinalSuffix(row.rank)}</small>
       </span>
-      <Flag team={row.name} className="standing-flag" />
-      <span className="standing-code">{teamCode(row.name)}</span>
+      <Flag team={row.name} fed={row.fed} className="standing-flag" />
+      <span className="standing-code">{codeOf(row)}</span>
       <span className="standing-mp">
         <span className="standing-paren">(</span>
         {row.mp}
