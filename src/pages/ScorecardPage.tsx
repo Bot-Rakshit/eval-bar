@@ -24,7 +24,7 @@ export default function ScorecardPage() {
   const showFlags = params.get("flags") !== "0";
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
-  const { games: liveGames } = useOlympiadTeam({ section, team, anchorTour, demo });
+  const { sectionInfo, games: liveGames } = useOlympiadTeam({ section, team, anchorTour, demo });
   const games = demo ? demoGames(team) : liveGames;
 
   useEffect(() => {
@@ -44,6 +44,7 @@ export default function ScorecardPage() {
           team={team}
           showProjection={showProjection}
           showFlags={showFlags}
+          section={sectionInfo.label}
         />
       </div>
     </div>

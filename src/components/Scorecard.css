@@ -13,12 +13,39 @@
   --bar-us: #f9f1da;
   --bar-them: #2c2717;
 
+  position: relative;
   box-sizing: border-box;
-  width: 164px;
-  padding: 10px 12px 11px;
-  border-radius: 11px;
+  width: 132px;
+  /* The top clears the lower half of the section tab */
+  padding: 13px 10px 10px;
+  border-radius: 10px;
   background: var(--card-fill);
   box-shadow: inset 0 0 0 1px var(--card-stroke);
+}
+
+/* ---------- Section tab ---------- */
+
+/* Straddles the top edge, like the move-number notch on the board cards, so
+   the section is named without spending a row on it. */
+.score-tab {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--card-fill);
+  box-shadow: inset 0 0 0 1px var(--card-stroke);
+  font-family: "Outfit", var(--app-font);
+  font-weight: 700;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  /* Letter-spacing trails the last glyph; pull it back so the word centres */
+  text-indent: 0.16em;
+  text-transform: uppercase;
+  color: var(--code-team);
+  white-space: nowrap;
 }
 
 /* ---------- The two teams ---------- */
@@ -29,16 +56,16 @@
      not shift the row as they go from "2" to "2½". */
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .score-row + .score-row {
-  margin-top: 3px;
+  margin-top: 2px;
 }
 
 .score-flag {
-  width: 28px;
-  height: 19px;
+  width: 24px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,9 +86,9 @@
 .score-code {
   font-family: "Outfit", var(--app-font);
   font-weight: 700;
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--code);
   white-space: nowrap;
 }
@@ -87,8 +114,8 @@
 
 .score-bar {
   position: relative;
-  margin-top: 8px;
-  height: 9px;
+  margin-top: 7px;
+  height: 8px;
   border-radius: 4px;
   overflow: hidden;
   background: var(--bar-them);

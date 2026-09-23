@@ -18,6 +18,8 @@ interface ScorecardProps {
   showProjection?: boolean;
   /** Hide the flags. */
   showFlags?: boolean;
+  /** Section name for the tab on the top edge, e.g. "Open" or "Women". */
+  section?: string;
 }
 
 /** Flags are bundled under /flags, keyed by federation code. */
@@ -53,13 +55,20 @@ function TeamRow({
   );
 }
 
-export function Scorecard({ games, team, showProjection = true, showFlags = true }: ScorecardProps) {
+export function Scorecard({
+  games,
+  team,
+  showProjection = true,
+  showFlags = true,
+  section,
+}: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
   const share = matchEvalShare(games, team);
 
   return (
     <div className="score-card">
+      {section && <span className="score-tab">{section}</span>}
       <TeamRow code={teamCode(team)} points={formatPoints(score.us)} isTeam showFlag={showFlags} />
       <TeamRow
         code={opponent ? teamCode(opponent) : ""}
