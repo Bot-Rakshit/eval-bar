@@ -18,7 +18,13 @@ export type MomentTone = "good" | "bad" | "neutral" | "alert";
 export interface Moment {
   id: string;
   kind: string;
+  /** The whole callout as a sentence, e.g. "Blunder by Gukesh". */
   text: string;
+  /** The same callout split for the banner: what happened, and to whom. */
+  label: string;
+  subject: string;
+  /** Which side `subject` is playing, so the banner can show their flag. */
+  side: "white" | "black";
   tone: MomentTone;
   priority: number;
   durationMs: number;
@@ -62,12 +68,29 @@ function isTeam(candidate: string, team: string): boolean {
   return candidate.trim().toLowerCase() === team.trim().toLowerCase();
 }
 
-function push(ctx: Ctx, kind: string, text: string, tone: MomentTone, priority: number, cooldownMs = 0) {
+interface Callout {
+  label: string;
+  /** true when the callout is about White's player */
+  white: boolean;
+  text: string;
+}
+
+function push(ctx: Ctx, kind: string, callout: Callout, tone: MomentTone, priority: number, cooldownMs = 0) {
   const last = ctx.memory.firedAt[kind] ?? 0;
   if (cooldownMs > 0 && ctx.now - last < cooldownMs) return;
   ctx.memory.firedAt[kind] = ctx.now;
   counter += 1;
-  ctx.out.push({ id: `${ctx.game.key}:${kind}:${counter}`, kind, text, tone, priority, durationMs: DEFAULT_DURATION_MS });
+  ctx.out.push({
+    id: `${ctx.game.key}:${kind}:${counter}`,
+    kind,
+    text: callout.text,
+    label: callout.label,
+    subject: nameOf(ctx.game, callout.white),
+    side: callout.white ? "white" : "black",
+    tone,
+    priority,
+    durationMs: DEFAULT_DURATION_MS,
+  });
 }
 
 /** Tone from the team's point of view: something good for `side` (white/black). */
@@ -87,11 +110,11 @@ function detectResult(ctx: Ctx) {
   memory.resultShown = true;
   if (game.result === "1/2-1/2") {
     const teamIsWhite = isTeam(game.whiteTeam, ctx.team);
-    push(ctx, "result", `${nameOf(game, teamIsWhite)} draws`, "neutral", 100);
+    push(ctx, "result", { label: "Draw", white: teamIsWhite, text: `${nameOf(game, teamIsWhite)} draws` }, "neutral", 100);
     return;
   }
   const whiteWon = game.result === "1-0";
-  push(ctx, "result", `${nameOf(game, whiteWon)} wins`, toneFor(ctx, whiteWon, true), 100);
+  push(ctx, "result", { label: "Win", white: whiteWon, text: `${nameOf(game, whiteWon)} wins` }, toneFor(ctx, whiteWon, true), 100);
 }
 
 function detectClocks(ctx: Ctx) {
@@ -107,10 +130,10 @@ function detectClocks(ctx: Ctx) {
     const flag = memory.timeFlags[side];
     if (clock < 60 && flag < 2) {
       memory.timeFlags[side] = 2;
-      push(ctx, `time-${side}`, `${nameOf(game, white)} under a minute`, "alert", 55);
+      push(ctx, `time-${side}`, { label: "Under a minute", white, text: `${nameOf(game, white)} under a minute` }, "alert", 55);
     } else if (clock < 300 && flag < 1) {
       memory.timeFlags[side] = 1;
-      push(ctx, `time-${side}`, `${nameOf(game, white)} in time trouble`, "alert", 50);
+      push(ctx, `time-${side}`, { label: "Time trouble", white, text: `${nameOf(game, white)} in time trouble` }, "alert", 50);
     } else if (clock >= 1200 && flag > 0) {
       memory.timeFlags[side] = 0; // time control added time back
     }
@@ -141,7 +164,8 @@ function detectEvalMoments(ctx: Ctx) {
   // Mate announced
   if (game.mateIn !== null && prevMate === null) {
     const forWhite = game.mateIn > 0;
-    push(ctx, "mate", `Mate in ${Math.abs(game.mateIn)} for ${nameOf(game, forWhite)}`, toneFor(ctx, forWhite, true), 90, 60000);
+    const label = `Mate in ${Math.abs(game.mateIn)}`;
+    push(ctx, "mate", { label, white: forWhite, text: `${label} for ${nameOf(game, forWhite)}` }, toneFor(ctx, forWhite, true), 90, 60000);
     return;
   }
 
@@ -149,11 +173,11 @@ function detectEvalMoments(ctx: Ctx) {
   if (singlePly) {
     const verdict = classifyMove(before, after, moverIsWhite);
     if (verdict === "blunder") {
-      push(ctx, "blunder", `Blunder by ${mover}`, toneFor(ctx, moverIsWhite, false), 80, 20000);
+      push(ctx, "blunder", { label: "Blunder", white: moverIsWhite, text: `Blunder by ${mover}` }, toneFor(ctx, moverIsWhite, false), 80, 20000);
       return;
     }
     if (verdict === "mistake") {
-      push(ctx, "mistake", `Mistake by ${mover}`, toneFor(ctx, moverIsWhite, false), 45, 30000);
+      push(ctx, "mistake", { label: "Mistake", white: moverIsWhite, text: `Mistake by ${mover}` }, toneFor(ctx, moverIsWhite, false), 45, 30000);
       return;
     }
   }
@@ -163,7 +187,7 @@ function detectEvalMoments(ctx: Ctx) {
   const nowWhiteWinning = after >= WINNING_MIN_PERCENT;
   const nowBlackWinning = after <= LOSING_MAX_PERCENT;
   if (!wasDecided && (nowWhiteWinning || nowBlackWinning)) {
-    push(ctx, "winning", `${nameOf(game, nowWhiteWinning)} is winning`, toneFor(ctx, nowWhiteWinning, true), 60, 90000);
+    push(ctx, "winning", { label: "Winning", white: nowWhiteWinning, text: `${nameOf(game, nowWhiteWinning)} is winning` }, toneFor(ctx, nowWhiteWinning, true), 60, 90000);
   }
 }
 
