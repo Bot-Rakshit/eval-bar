@@ -236,8 +236,8 @@
 
 .standing-rank {
   font-family: "Sora", var(--app-font);
-  font-weight: 700;
-  font-size: 18px;
+  font-weight: 800;
+  font-size: 28px;
   line-height: 1;
   color: var(--cream);
   font-variant-numeric: tabular-nums;
@@ -246,8 +246,7 @@
 
 /* Units and ordinal suffixes: small, so the numbers stay the story */
 .standing-rank small,
-.standing-mp small,
-.standing-gp small {
+.standing-mp small {
   margin-left: 2px;
   font-family: "Outfit", var(--app-font);
   font-weight: 700;
@@ -258,11 +257,11 @@
   color: var(--muted);
 }
 
-.standing-mp small,
-.standing-gp small {
+.standing-mp small {
   margin-left: 4px;
   vertical-align: baseline;
-  font-size: 0.46em;
+  font-size: 0.65em;
+  color: var(--cream);
 }
 
 .standing-flag {
@@ -292,20 +291,17 @@
 
 .standing-mp {
   font-family: "Sora", var(--app-font);
-  font-weight: 800;
-  font-size: 26px;
+  font-weight: 700;
+  font-size: 20px;
   line-height: 1;
   color: var(--cream);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.standing-gp {
-  font-family: "Sora", var(--app-font);
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1;
+.standing-paren {
   color: var(--muted);
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 /* The followed team, wherever it sits in the table */

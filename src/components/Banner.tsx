@@ -3,7 +3,6 @@ import { TrackedGame } from "../types";
 import { ActiveMoment } from "../hooks/useMoments";
 import { Standings, StandingRow } from "../api/standings";
 import { teamCode } from "../lib/feds";
-import { formatPoints } from "../lib/teamScore";
 import "./Banner.css";
 
 const LEAVE_MS = 320;
@@ -102,9 +101,9 @@ function ordinalSuffix(n: number): string {
 }
 
 /**
- * One team in the table: its place as an ordinal ("=7th" when shared), flag,
- * code, match points, and game points — the tiebreak — each with its unit, so
- * a viewer never has to guess which number is which.
+ * One team in the table: its place as an ordinal ("=7th" when shared), large,
+ * then flag, code and match points in brackets — "(12 MP)" — so there is
+ * exactly one other number and it says what it is.
  */
 function StandingEntry({ row, shared, isTeam }: { row: StandingRow; shared: boolean; isTeam: boolean }) {
   return (
@@ -117,12 +116,10 @@ function StandingEntry({ row, shared, isTeam }: { row: StandingRow; shared: bool
       <Flag team={row.name} className="standing-flag" />
       <span className="standing-code">{teamCode(row.name)}</span>
       <span className="standing-mp">
+        <span className="standing-paren">(</span>
         {row.mp}
         <small>MP</small>
-      </span>
-      <span className="standing-gp">
-        {formatPoints(row.gp)}
-        <small>GP</small>
+        <span className="standing-paren">)</span>
       </span>
     </span>
   );
