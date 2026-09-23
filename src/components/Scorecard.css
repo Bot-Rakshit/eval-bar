@@ -16,7 +16,7 @@
 
   position: relative;
   box-sizing: border-box;
-  width: 216px;
+  width: 136px;
   /* The top clears the lower half of the section tab */
   padding: 14px 10px 10px;
   border-radius: 10px;
@@ -49,23 +49,22 @@
   white-space: nowrap;
 }
 
-/* ---------- The match: team left, score centre, opponent right ---------- */
+/* ---------- The match: two columns, each flag / code / score ---------- */
 
 .score-match {
   display: grid;
-  /* Fixed side columns, wide enough for the longest code ("UZB 2"), so the
-     score has its own space and a half point can never push into a code —
-     and the score sits dead centre whoever is playing. */
-  grid-template-columns: 46px minmax(0, 1fr) 46px;
-  align-items: center;
-  gap: 6px;
+  /* Equal columns either side of the dash, so it stays centred whatever
+     the codes are */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  column-gap: 4px;
 }
 
 .score-side {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -103,16 +102,8 @@
   color: var(--code-team);
 }
 
-/* Each score hugs the dash from its own side, so the dash never moves as a
-   half point lands on one of them. */
-.score-result {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  column-gap: 4px;
-}
-
 .score-points {
+  margin-top: 2px;
   font-family: "Sora", var(--app-font);
   font-weight: 800;
   font-size: 30px;
@@ -122,23 +113,18 @@
   white-space: nowrap;
 }
 
+/* The half point a size down, the scoreboard way */
 .score-half {
   font-size: 0.6em;
   margin-left: 1px;
 }
 
-.score-points.is-us {
-  text-align: right;
-}
-
-.score-points.is-them {
-  text-align: left;
-}
-
+/* Sits on the score line, between the two scores */
 .score-dash {
+  margin-bottom: 7px;
   font-family: "Sora", var(--app-font);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   color: var(--code-team);
   opacity: 0.7;

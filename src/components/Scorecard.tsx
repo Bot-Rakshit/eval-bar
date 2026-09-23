@@ -51,12 +51,25 @@ function Points({ value }: { value: number }) {
   );
 }
 
-/** One side of the match: the flag with the federation code beneath it. */
-function Side({ code, isTeam, showFlag }: { code: string; isTeam: boolean; showFlag: boolean }) {
+/** One side of the match, top to bottom: flag, federation code, its score. */
+function Side({
+  code,
+  points,
+  isTeam,
+  showFlag,
+}: {
+  code: string;
+  points: number;
+  isTeam: boolean;
+  showFlag: boolean;
+}) {
   return (
     <div className={isTeam ? "score-side is-team" : "score-side"}>
       {showFlag && <Flag code={code} />}
       <span className="score-code">{code || "—"}</span>
+      <span className="score-points">
+        <Points value={points} />
+      </span>
     </div>
   );
 }
@@ -80,17 +93,9 @@ export function Scorecard({
     <div className="score-card">
       {section && <span className="score-tab">{section}</span>}
       <div className="score-match">
-        <Side code={teamCode(team)} isTeam showFlag={showFlags} />
-        <div className="score-result">
-          <span className="score-points is-us">
-            <Points value={score.us} />
-          </span>
-          <span className="score-dash">–</span>
-          <span className="score-points is-them">
-            <Points value={score.them} />
-          </span>
-        </div>
-        <Side code={opponent ? teamCode(opponent) : ""} isTeam={false} showFlag={showFlags} />
+        <Side code={teamCode(team)} points={score.us} isTeam showFlag={showFlags} />
+        <span className="score-dash">–</span>
+        <Side code={opponent ? teamCode(opponent) : ""} points={score.them} isTeam={false} showFlag={showFlags} />
       </div>
 
       {showProjection && (
