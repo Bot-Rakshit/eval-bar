@@ -196,7 +196,7 @@ export default function TeamPage() {
             onDone={ticker.done}
           />
         )}
-        {active && <MomentBanner key={active.moment.id} active={active} board={activeBoard} />}
+        {active && <MomentBanner key={active.moment.id} active={active} board={activeBoard} team={team} />}
       </div>
       {games.length === 0 && error && <p className="team-waiting">Reconnecting to Lichess…</p>}
     </div>

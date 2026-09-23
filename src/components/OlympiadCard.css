@@ -14,13 +14,18 @@
 
   --move: #f9f1da;
 
-  /* Eval bar — Chessiro's game-review bar, recoloured for this card */
-  --bar-white: #f9f1da;
-  --bar-black: #2c2717;
+  /*
+   * The bar is a team bar, not a colour bar: the followed team always sits on
+   * the left and fills in its gold, the opponent's share is the blue. Cream and
+   * near-black would read as White and Black — wrong on every board where the
+   * team has the black pieces.
+   */
+  --bar-us: #e4c372;
+  --bar-them: #22405f;
   /* Same line as the notch, so the two quiet edges stay together */
   --bar-stroke: var(--notch-stroke);
-  --eval-on-white: #000000;
-  --eval-on-black: #f9f1da;
+  --eval-on-us: #071a30;
+  --eval-on-them: #f9f1da;
 
   --clock: #ffffff;
   --clock-team: #e4c372;
@@ -32,7 +37,7 @@
   --move-weight: 500;
   --eval-size: 14px;
   --eval-weight: 600;
-  --eval-weight-on-white: 800;
+  --eval-weight-on-us: 800;
   --clock-size: 14px;
   --clock-weight: 400;
 
@@ -157,15 +162,15 @@
   height: 21px;
   border-radius: 8px;
   overflow: hidden;
-  background: var(--bar-black);
+  background: var(--bar-them);
   box-shadow: inset 0 0 0 1px var(--bar-stroke);
 }
 
 /* Driven by scaleX so the fill moves on the compositor, not by re-layout */
-.oly-bar-white {
+.oly-bar-us {
   position: absolute;
   inset: 0;
-  background: var(--bar-white);
+  background: var(--bar-us);
   transform-origin: left center;
   transition: transform 550ms cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
@@ -188,17 +193,17 @@
   transition: opacity 300ms ease;
 }
 
-.oly-eval.on-white {
+.oly-eval.on-us {
   left: 9px;
-  color: var(--eval-on-white);
+  color: var(--eval-on-us);
   /* Dark on light reads thinner than light on dark at the same weight, so
      this copy carries one step more to match the one on the dark side. */
-  font-weight: var(--eval-weight-on-white);
+  font-weight: var(--eval-weight-on-us);
 }
 
-.oly-eval.on-black {
+.oly-eval.on-them {
   right: 9px;
-  color: var(--eval-on-black);
+  color: var(--eval-on-them);
 }
 
 /* ---------- Result ---------- */
@@ -215,7 +220,7 @@
   font-size: 26px;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--eval-on-black);
+  color: var(--eval-on-them);
   font-variant-numeric: tabular-nums;
 }
 
@@ -267,7 +272,7 @@
 
 /* ---------- Placeholder ---------- */
 
-.oly-card.is-empty .oly-bar-white {
+.oly-card.is-empty .oly-bar-us {
   animation: oly-breathe 2.4s ease-in-out infinite;
 }
 

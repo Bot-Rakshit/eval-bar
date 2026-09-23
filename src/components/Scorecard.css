@@ -9,9 +9,10 @@
   --code-team: #e4c372;
   --points: #ffffff;
 
-  /* The eval bar, same two tones as the board cards' eval bar */
-  --bar-us: #f9f1da;
-  --bar-them: #2c2717;
+  /* Team colours, as on the board cards — not cream and near-black, which
+     would read as White and Black */
+  --bar-us: #e4c372;
+  --bar-them: #22405f;
 
   position: relative;
   box-sizing: border-box;

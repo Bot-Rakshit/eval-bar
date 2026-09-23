@@ -18,12 +18,24 @@ function Flag({ team, className, fed }: { team: string; className: string; fed?:
   );
 }
 
-function formatEval(game: TrackedGame): string | null {
-  if (game.mateIn !== null) return `M${Math.abs(game.mateIn)}`;
+function sameTeam(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/**
+ * The eval from the followed team's side — "+1.6" means the team is better,
+ * whichever colour its player has. A White-relative number reads backwards on
+ * every board where the team has Black.
+ */
+function formatEval(game: TrackedGame, team: string): string | null {
+  const teamIsBlack = sameTeam(game.blackTeam, team) && !sameTeam(game.whiteTeam, team);
+  const flip = teamIsBlack ? -1 : 1;
+  if (game.mateIn !== null) return `${game.mateIn * flip > 0 ? "+" : "−"}M${Math.abs(game.mateIn)}`;
   if (game.evaluation === null) return null;
-  const value = game.evaluation;
-  if (Math.abs(value) >= 10) return value > 0 ? `+${Math.round(value)}` : `${Math.round(value)}`;
-  return value > 0 ? `+${value.toFixed(1)}` : value.toFixed(1);
+  const value = game.evaluation * flip;
+  if (Math.abs(value) < 0.05) return "0.0";
+  const size = Math.abs(value) >= 10 ? `${Math.round(Math.abs(value))}` : Math.abs(value).toFixed(1);
+  return `${value > 0 ? "+" : "−"}${size}`;
 }
 
 function formatClock(seconds: number): string {
@@ -35,20 +47,26 @@ function formatClock(seconds: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
 }
 
-const RESULT_TEXT: Record<string, string> = { "1-0": "1–0", "0-1": "0–1", "1/2-1/2": "½–½" };
+/** A result from the followed team's side: "1–0" is a team win. */
+function formatResult(game: TrackedGame, team: string): string {
+  if (game.result === "1/2-1/2") return "½–½";
+  const teamIsBlack = sameTeam(game.blackTeam, team) && !sameTeam(game.whiteTeam, team);
+  const whiteWon = game.result === "1-0";
+  return whiteWon !== teamIsBlack ? "1–0" : "0–1";
+}
 
 /**
  * The one hard fact in the corner: the result for a finished game, the clock
  * for time trouble, the eval for anything the engine called.
  */
-function factFor(active: ActiveMoment): string | null {
+function factFor(active: ActiveMoment, team: string): string | null {
   const { game, moment } = active;
-  if (game.result) return RESULT_TEXT[game.result] ?? null;
+  if (game.result) return formatResult(game, team);
   const label = moment.label.toLowerCase();
   if (label.includes("minute") || label.includes("time")) {
     return formatClock(moment.side === "white" ? game.whiteClock : game.blackClock);
   }
-  return formatEval(game);
+  return formatEval(game, team);
 }
 
 /**
@@ -56,7 +74,7 @@ function factFor(active: ActiveMoment): string | null {
  * the board and the one hard fact at the right. Sized to the board strip and
  * laid over it.
  */
-export function MomentBanner({ active, board }: { active: ActiveMoment; board: number }) {
+export function MomentBanner({ active, board, team }: { active: ActiveMoment; board: number; team: string }) {
   const { moment, game } = active;
   const [leaving, setLeaving] = useState(false);
 
@@ -66,8 +84,9 @@ export function MomentBanner({ active, board }: { active: ActiveMoment; board: n
     return () => clearTimeout(timer);
   }, [moment.id, moment.durationMs]);
 
-  const team = moment.side === "white" ? game.whiteTeam : game.blackTeam;
-  const fact = factFor(active);
+  // The player's own team, for the flag — not necessarily the followed one
+  const subjectTeam = moment.side === "white" ? game.whiteTeam : game.blackTeam;
+  const fact = factFor(active, team);
 
   return (
     <div
@@ -79,7 +98,7 @@ export function MomentBanner({ active, board }: { active: ActiveMoment; board: n
         <span className="banner-label">{moment.label}</span>
       </div>
       <div className="banner-main">
-        {team && <Flag team={team} className="banner-flag" />}
+        {subjectTeam && <Flag team={subjectTeam} className="banner-flag" />}
         <span className={moment.subject.length > 12 ? "banner-name is-long" : "banner-name"}>
           {moment.subject}
         </span>
