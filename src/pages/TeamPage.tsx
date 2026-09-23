@@ -3,25 +3,30 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { TrackedGame } from "../types";
 import OlympiadGrid from "../components/OlympiadGrid";
 import { ActiveMoment, useMoments } from "../hooks/useMoments";
-import { projectedScore } from "../lib/intel/moments";
+import { ALERT_PRIORITY, projectedScore } from "../lib/intel/moments";
 import { DEFAULT_TEAM, OLYMPIAD_ANCHOR_TOUR, useOlympiadTeam } from "../hooks/useOlympiadTeam";
 import { formatPoints, matchScore, opponentOf } from "../lib/teamScore";
-import { DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
+import { DEMO_ALERT, DEMO_SCRIPT, demoGames, demoMoment } from "../lib/intel/demo";
 import { MomentBanner, StandingsBanner } from "../components/Banner";
 import { useStandingsTicker } from "../hooks/useStandingsTicker";
 
 /**
  * ?demo=1 — scripted boards cycling through every callout, for previewing the
- * look. The cycle holds while `paused` (the standings are on air).
+ * look. The cycle holds while `paused` (a standings showing is owed or on
+ * air). Once, 20s into the first standings showing, it fires a blunder so the
+ * demo also shows an alert cutting the table and the table coming back.
  */
 function useDemo(
   team: string,
   enabled: boolean,
-  paused: boolean
+  paused: boolean,
+  standingsOnAir: boolean
 ): { games: TrackedGame[]; active: ActiveMoment | null } {
   const games = useMemo(() => (enabled ? demoGames(team) : []), [team, enabled]);
   const [step, setStep] = useState(-1);
   const [visible, setVisible] = useState(false);
+  const [alertOn, setAlertOn] = useState(false);
+  const alertFiredRef = useRef(false);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
@@ -46,17 +51,41 @@ function useDemo(
     return () => clearTimeout(timer);
   }, [enabled]);
 
+  // The alert's own timers live apart from the effect that starts them: the
+  // alert cuts the standings, which flips `standingsOnAir`, and an effect
+  // cleanup there would cancel the timer that ends the alert — leaving it on
+  // air forever with the boards hidden behind it.
+  const alertTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => {
+    if (!enabled || !standingsOnAir || alertFiredRef.current) return;
+    alertFiredRef.current = true;
+    alertTimersRef.current.push(
+      setTimeout(() => {
+        setAlertOn(true);
+        alertTimersRef.current.push(setTimeout(() => setAlertOn(false), DEMO_SCRIPT_MS));
+      }, DEMO_ALERT_AFTER_MS)
+    );
+  }, [enabled, standingsOnAir]);
+  useEffect(() => {
+    const timers = alertTimersRef.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
   const active = useMemo((): ActiveMoment | null => {
-    if (!enabled || !visible || step < 0) return null;
+    if (!enabled) return null;
+    if (alertOn) return { moment: demoMoment(DEMO_ALERT, "alert"), game: games[DEMO_ALERT.boardIndex] };
+    if (!visible || step < 0) return null;
     const current = DEMO_SCRIPT[step];
     return { moment: demoMoment(current, step), game: games[current.boardIndex] };
-  }, [enabled, visible, step, games]);
+  }, [enabled, alertOn, visible, step, games]);
 
   return { games, active };
 }
 
 /** How long each demo callout stays up — matches demoMoment's duration. */
 const DEMO_SCRIPT_MS = 5000;
+/** How far into the first standings showing the demo's blunder breaks in. */
+const DEMO_ALERT_AFTER_MS = 20_000;
 
 export default function TeamPage() {
   const { section = "open" } = useParams<{ section: string }>();
@@ -69,9 +98,9 @@ export default function TeamPage() {
   const scale = Number(params.get("scale")) || 1.6;
   const demo = params.get("demo") === "1";
   const momentsEnabled = params.get("moments") !== "0";
-  // Minutes between standings tickers; ?standings=0 turns them off
+  // Minutes between standings showings (default 7); ?standings=0 turns them off
   const standingsParam = params.get("standings");
-  const standingsEvery = standingsParam === null ? 10 : Math.max(0, Number(standingsParam) || 0);
+  const standingsEvery = standingsParam === null ? 7 : Math.max(0, Number(standingsParam) || 0);
   // Any tour id inside another team event's broadcast group works here
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
@@ -91,23 +120,34 @@ export default function TeamPage() {
     };
   }, [bgMode]);
 
-  // The standings wait for a moment to clear; a moment that fires while the
-  // standings are up is laid over them.
+  // The standings wait for the strip to be free; an alert (result, mate,
+  // blunder) cuts them and sends viewers back to the boards, and lesser
+  // callouts hold until the table has finished.
   const [momentOnAir, setMomentOnAir] = useState(false);
+  const [alertOnAir, setAlertOnAir] = useState(false);
   const ticker = useStandingsTicker({
     section,
     team,
     everyMinutes: standingsEvery,
     demo,
     busy: momentOnAir,
+    alert: alertOnAir,
   });
 
-  const liveActive = useMoments(liveGames, team, momentsEnabled && !demo);
-  const demoState = useDemo(team, demo, ticker.standings !== null);
+  const liveActive = useMoments(
+    liveGames,
+    team,
+    momentsEnabled && !demo,
+    ticker.standings !== null ? ALERT_PRIORITY : 0
+  );
+  const demoState = useDemo(team, demo, ticker.pending, ticker.standings !== null);
   const games = demo ? demoState.games : liveGames;
   const active = demo ? demoState.active : liveActive;
 
-  useEffect(() => setMomentOnAir(active !== null), [active]);
+  useEffect(() => {
+    setMomentOnAir(active !== null);
+    setAlertOnAir(active !== null && active.moment.priority >= ALERT_PRIORITY);
+  }, [active]);
 
   // The board the moment is about, numbered as it sits in the strip
   const activeBoard = active ? games.findIndex((game) => game.key === active.game.key) + 1 : 0;

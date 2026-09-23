@@ -1,7 +1,10 @@
 /**
  * GET /api/standings?section=open|women[&team=India][&top=10][&tour=<id>]
  *
- * Team standings for an Olympiad section, trimmed for the overlay's ticker.
+ * Team standings for an Olympiad section, trimmed for the overlay's ticker:
+ * the top 10 (a tie at 10th shown whole), extended to two places below the
+ * followed team — or, when that team is far down, the team and the two below
+ * it returned separately as `tail`.
  *
  * Lichess serves these at /broadcast/{tour}/teams/standings but without a CORS
  * header, so a browser page cannot read them directly — this relays them. The
@@ -23,6 +26,10 @@ const SECTION_TOURS = {
 
 const TOUR_ID = /^[A-Za-z0-9]{8}$/;
 const MAX_TIE_OVERFLOW = 4;
+/** Places shown below the followed team. */
+const BELOW_TEAM = 2;
+/** A team this few rows past the leaders is reached by extending the table. */
+const NEAR_ROWS = 4;
 
 module.exports = async function handler(req, res) {
   const section = String(req.query.section || "open").toLowerCase();
@@ -68,15 +75,23 @@ module.exports = async function handler(req, res) {
   // rather than cut at an arbitrary row — capped, because after an early
   // round dozens of teams can share a place.
   const leaders = standings.filter((row) => row.rank <= top).slice(0, top + MAX_TIE_OVERFLOW);
-  const followed = team ? standings.find((row) => row.name.toLowerCase() === team) || null : null;
+
+  // The followed team and the two places below it — who is chasing. When that
+  // run starts close to the leaders it simply extends the table; when the team
+  // is far down it follows the leaders after a gap, so the ticker never has to
+  // crawl through thirty rows to reach it.
+  let table = leaders;
+  let tail = [];
+  const at = team ? standings.findIndex((row) => row.name.toLowerCase() === team) : -1;
+  if (at >= 0) {
+    const end = at + BELOW_TEAM;
+    if (at <= leaders.length + NEAR_ROWS) {
+      table = standings.slice(0, Math.max(leaders.length, end + 1));
+    } else {
+      tail = standings.slice(at, end + 1);
+    }
+  }
 
   res.setHeader("Cache-Control", "public, s-maxage=120, stale-while-revalidate=600");
-  res.status(200).json({
-    section,
-    rounds,
-    teams: standings.length,
-    top: leaders,
-    // Only when it would not already be on screen
-    team: followed && !leaders.some((row) => row.name === followed.name) ? followed : null,
-  });
+  res.status(200).json({ section, rounds, teams: standings.length, top: table, tail });
 };

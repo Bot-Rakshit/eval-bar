@@ -55,6 +55,8 @@ interface Step {
   subject: string;
   side: "white" | "black";
   tone: MomentTone;
+  /** Same scale as the live detector — 80 and up is an alert. */
+  priority: number;
 }
 
 /**
@@ -62,17 +64,30 @@ interface Step {
  * actually on that demo board. Tones are from the followed team's side.
  */
 export const DEMO_SCRIPT: Step[] = [
-  { boardIndex: 0, label: "Blunder", subject: "Abdusattorov", side: "black", tone: "good" },
-  { boardIndex: 1, label: "Winning", subject: "Arjun", side: "black", tone: "good" },
-  { boardIndex: 2, label: "Time trouble", subject: "Yakubboev", side: "black", tone: "alert" },
-  { boardIndex: 0, label: "Mate in 4", subject: "Gukesh", side: "white", tone: "good" },
-  { boardIndex: 1, label: "Mistake", subject: "Sindarov", side: "white", tone: "good" },
-  { boardIndex: 3, label: "Win", subject: "Vidit", side: "black", tone: "good" },
-  { boardIndex: 2, label: "Draw", subject: "Pragg", side: "white", tone: "neutral" },
-  { boardIndex: 0, label: "Under a minute", subject: "Abdusattorov", side: "black", tone: "alert" },
+  { boardIndex: 0, label: "Blunder", subject: "Abdusattorov", side: "black", tone: "good", priority: 80 },
+  { boardIndex: 1, label: "Winning", subject: "Arjun", side: "black", tone: "good", priority: 60 },
+  { boardIndex: 2, label: "Time trouble", subject: "Yakubboev", side: "black", tone: "alert", priority: 50 },
+  { boardIndex: 0, label: "Mate in 4", subject: "Gukesh", side: "white", tone: "good", priority: 90 },
+  { boardIndex: 1, label: "Mistake", subject: "Sindarov", side: "white", tone: "good", priority: 45 },
+  { boardIndex: 3, label: "Win", subject: "Vidit", side: "black", tone: "good", priority: 100 },
+  { boardIndex: 2, label: "Draw", subject: "Pragg", side: "white", tone: "neutral", priority: 100 },
+  { boardIndex: 0, label: "Under a minute", subject: "Abdusattorov", side: "black", tone: "alert", priority: 55 },
 ];
 
-export function demoMoment(step: Step, index: number): Moment {
+/**
+ * Fired into the first standings showing, so the demo shows an alert cutting
+ * the table, the boards coming back, and the table returning afterwards.
+ */
+export const DEMO_ALERT: Step = {
+  boardIndex: 1,
+  label: "Blunder",
+  subject: "Sindarov",
+  side: "white",
+  tone: "good",
+  priority: 80,
+};
+
+export function demoMoment(step: Step, index: number | string): Moment {
   return {
     id: `demo-${index}`,
     kind: "demo",
@@ -81,7 +96,7 @@ export function demoMoment(step: Step, index: number): Moment {
     subject: step.subject,
     side: step.side,
     tone: step.tone,
-    priority: 0,
+    priority: step.priority,
     durationMs: 5000,
   };
 }

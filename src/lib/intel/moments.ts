@@ -51,6 +51,13 @@ export function freshMemory(): BoardMemory {
   };
 }
 
+/**
+ * Moments at or above this priority are alerts — a result (100), a mate
+ * (90), a blunder (80) — and cut into anything else on air, the standings
+ * ticker included. Lesser callouts wait their turn.
+ */
+export const ALERT_PRIORITY = 80;
+
 const SETTLED_DEPTH = 12;
 const DEFAULT_DURATION_MS = 5000;
 

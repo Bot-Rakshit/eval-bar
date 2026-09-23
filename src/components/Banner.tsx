@@ -94,37 +94,56 @@ export function MomentBanner({ active, board }: { active: ActiveMoment; board: n
   );
 }
 
-/** "=7" when the place is shared, so a run of equal numbers reads as a tie. */
-function rankLabel(row: StandingRow, rows: StandingRow[]): string {
-  const shared = rows.filter((other) => other.rank === row.rank).length > 1;
-  return shared ? `=${row.rank}` : `${row.rank}`;
+/** 1 → "st", 2 → "nd", 11 → "th", 22 → "nd" */
+function ordinalSuffix(n: number): string {
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return "th";
+  return ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
 }
 
-function StandingEntry({ row, rows, isTeam }: { row: StandingRow; rows: StandingRow[]; isTeam: boolean }) {
+/**
+ * One team in the table: its place as an ordinal ("=7th" when shared), flag,
+ * code, match points, and game points — the tiebreak — each with its unit, so
+ * a viewer never has to guess which number is which.
+ */
+function StandingEntry({ row, shared, isTeam }: { row: StandingRow; shared: boolean; isTeam: boolean }) {
   return (
     <span className={isTeam ? "standing is-team" : "standing"}>
-      <span className="standing-rank">{rankLabel(row, rows)}</span>
+      <span className="standing-rank">
+        {shared && "="}
+        {row.rank}
+        <small>{ordinalSuffix(row.rank)}</small>
+      </span>
       <Flag team={row.name} className="standing-flag" />
       <span className="standing-code">{teamCode(row.name)}</span>
-      <span className="standing-mp">{row.mp}</span>
-      <span className="standing-gp">{formatPoints(row.gp)}</span>
+      <span className="standing-mp">
+        {row.mp}
+        <small>MP</small>
+      </span>
+      <span className="standing-gp">
+        {formatPoints(row.gp)}
+        <small>GP</small>
+      </span>
     </span>
   );
 }
 
 /**
  * Crawl speed in the strip's own units — about 150px/s on screen at the
- * default scale, standard ticker pace. A full table (top 10 with a tie at the
- * cut) takes ~30s to pass.
+ * default scale, standard ticker pace.
  */
 const CRAWL_PX_PER_S = 95;
+/** Full passes through the table on each showing. */
+const PASSES = 2;
 const HOLD_START_MS = 2400;
-const HOLD_END_MS = 2600;
+const HOLD_END_MS = 1800;
 
 /**
- * The table as a ticker: the leaders scroll past once, the followed team lit
- * wherever it sits (and appended after a gap when it is outside the top), then
- * the banner leaves and hands the strip back to the boards.
+ * The table as a ticker. The list is laid out three times end to end and
+ * scrolled exactly two copies' length, so it loops seamlessly through the
+ * table twice and comes to rest with the leaders back at the start. The
+ * followed team is lit wherever it sits; when it is far down it and the two
+ * places below it follow the leaders after a gap.
  */
 export function StandingsBanner({
   standings,
@@ -137,42 +156,40 @@ export function StandingsBanner({
   section: string;
   onDone: () => void;
 }) {
-  const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [leaving, setLeaving] = useState(false);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
   useLayoutEffect(() => {
-    const viewport = viewportRef.current;
     const track = trackRef.current;
-    if (!viewport || !track) return;
+    const copies = track?.children;
+    if (!track || !copies || copies.length < 2) return;
 
-    // Only as far as the last entry needs to come into view — no dead air.
-    const distance = Math.max(0, track.scrollWidth - viewport.clientWidth);
-    const crawlMs = (distance / CRAWL_PX_PER_S) * 1000;
-    const animation =
-      distance > 0
-        ? track.animate([{ transform: "translateX(0)" }, { transform: `translateX(${-distance}px)` }], {
-            duration: crawlMs,
-            delay: HOLD_START_MS,
-            easing: "linear",
-            fill: "forwards",
-          })
-        : null;
+    // One copy's length, gap included: where the second copy starts
+    const cycle = (copies[1] as HTMLElement).offsetLeft - (copies[0] as HTMLElement).offsetLeft;
+    const crawlMs = ((cycle * PASSES) / CRAWL_PX_PER_S) * 1000;
+    const animation = track.animate(
+      [{ transform: "translateX(0)" }, { transform: `translateX(${-cycle * PASSES}px)` }],
+      { duration: crawlMs, delay: HOLD_START_MS, easing: "linear", fill: "forwards" }
+    );
 
     const total = HOLD_START_MS + crawlMs + HOLD_END_MS;
     const leaveTimer = setTimeout(() => setLeaving(true), total);
     const doneTimer = setTimeout(() => doneRef.current(), total + LEAVE_MS);
     return () => {
-      animation?.cancel();
+      animation.cancel();
       clearTimeout(leaveTimer);
       clearTimeout(doneTimer);
     };
   }, [standings]);
 
   const isTeam = (row: StandingRow) => row.name.trim().toLowerCase() === team.trim().toLowerCase();
-  const rows = standings.top;
+  const every = [...standings.top, ...standings.tail];
+  const shared = (row: StandingRow) => every.filter((other) => other.rank === row.rank).length > 1;
+  const entry = (row: StandingRow) => (
+    <StandingEntry key={row.name} row={row} shared={shared(row)} isTeam={isTeam(row)} />
+  );
 
   return (
     <div className={`banner tone-good${leaving ? " is-leaving" : ""}`}>
@@ -182,17 +199,20 @@ export function StandingsBanner({
         </span>
         <span className="banner-label">Standings</span>
       </div>
-      <div className="banner-crawl" ref={viewportRef}>
+      <div className="banner-crawl">
         <div className="banner-track" ref={trackRef}>
-          {rows.map((row) => (
-            <StandingEntry key={row.name} row={row} rows={rows} isTeam={isTeam(row)} />
+          {[0, 1, 2].map((copy) => (
+            <div className="banner-cycle" key={copy} aria-hidden={copy > 0}>
+              {standings.top.map(entry)}
+              {standings.tail.length > 0 && (
+                <>
+                  <span className="standing-gap">···</span>
+                  {standings.tail.map(entry)}
+                </>
+              )}
+              <span className="banner-loop" />
+            </div>
           ))}
-          {standings.team && (
-            <>
-              <span className="standing-gap">···</span>
-              <StandingEntry row={standings.team} rows={[standings.team]} isTeam />
-            </>
-          )}
         </div>
       </div>
     </div>

@@ -12,10 +12,13 @@ export interface Standings {
   section: string;
   /** Rounds with a result in the table so far */
   rounds: number;
-  /** Everyone placed in the top N, a tie on the boundary shown whole */
+  /**
+   * The top 10 (a tie at 10th shown whole), extended to two places below the
+   * followed team when it sits just outside
+   */
   top: StandingRow[];
-  /** The followed team, when it is not already in `top` */
-  team: StandingRow | null;
+  /** The followed team and the two places below it, when it is far down */
+  tail: StandingRow[];
 }
 
 /**
@@ -52,5 +55,5 @@ export const DEMO_STANDINGS: Standings = {
     { rank: 10, name: "United States of America", mp: 10, gp: 16 },
     { rank: 10, name: "Uzbekistan 2", mp: 10, gp: 16 },
   ],
-  team: null,
+  tail: [],
 };

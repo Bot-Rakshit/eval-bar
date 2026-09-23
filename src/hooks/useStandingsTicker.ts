@@ -7,75 +7,114 @@ interface Options {
   /** Minutes between showings; 0 turns the ticker off. */
   everyMinutes: number;
   demo: boolean;
-  /** True while something else (a moment) is on air — the ticker waits its turn. */
+  /** Any moment on air — a showing waits for the strip to be free. */
   busy: boolean;
+  /** An alert on air (result, mate, blunder) — cuts a showing in progress. */
+  alert: boolean;
 }
 
-/** In the demo the ticker comes round far more often, so it can be seen. */
-const DEMO_EVERY_MS = 45_000;
+/** The demo comes round far sooner than 7 minutes so it can be watched. */
+const DEMO_EVERY_MS = 150_000;
 /** Before the first showing, so an operator sees it work soon after going live. */
 const FIRST_SHOWING_MS = 60_000;
-// Lands in the demo's first gap between callouts (they run 5s on, 2.5s off
-// from 1.5s in), so the table shows straight away instead of queueing.
 const DEMO_FIRST_SHOWING_MS = 7_000;
-// Short enough to always catch a gap between callouts rather than
-// repeatedly landing inside one.
-const BUSY_RETRY_MS = 1_000;
+/**
+ * The boards get this long on screen after a moment before the table comes
+ * (back) up — an alert sends viewers to the boards, so let them look.
+ */
+const BARS_AFTER_MOMENT_MS = 12_000;
+const DEMO_BARS_AFTER_MOMENT_MS = 3_000;
+const POLL_MS = 1_000;
 
 /**
- * Brings the standings banner round on a timer. Fetches fresh each time it is
- * due (the relay is edge-cached, so that is cheap); if the fetch fails it just
- * skips a turn rather than showing stale or empty data.
+ * Brings the standings round every N minutes on a fixed cadence. Each slot
+ * makes a showing owed; it goes out as soon as the strip is free. An alert cuts
+ * a showing short and it is owed again, so it comes back once the alert has
+ * cleared and the boards have had their moment — the table is not lost until
+ * the next slot. A failed fetch skips the turn rather than showing stale data.
  */
-export function useStandingsTicker({ section, team, everyMinutes, demo, busy }: Options) {
+export function useStandingsTicker({ section, team, everyMinutes, demo, busy, alert }: Options) {
   const [standings, setStandings] = useState<Standings | null>(null);
   const [visible, setVisible] = useState(false);
+  const [owed, setOwed] = useState(false);
+
+  const owedRef = useRef(false);
+  const visibleRef = useRef(false);
   const busyRef = useRef(busy);
+  const notBeforeRef = useRef(0);
   busyRef.current = busy;
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** The current fetch-and-show step, so `done` can book the next one. */
-  const dueRef = useRef<() => void>(() => {});
 
   const enabled = everyMinutes > 0 && (section === "open" || section === "men" || section === "women");
   const everyMs = demo ? DEMO_EVERY_MS : everyMinutes * 60_000;
+  const barsAfterMoment = demo ? DEMO_BARS_AFTER_MOMENT_MS : BARS_AFTER_MOMENT_MS;
 
-  const schedule = useCallback((delay: number, run: () => void) => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(run, delay);
+  const markOwed = useCallback((value: boolean) => {
+    owedRef.current = value;
+    setOwed(value);
   }, []);
 
+  const markVisible = useCallback((value: boolean) => {
+    visibleRef.current = value;
+    setVisible(value);
+  }, []);
+
+  // The cadence: every slot makes a showing owed
+  useEffect(() => {
+    if (!enabled) return;
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const first = setTimeout(
+      () => {
+        markOwed(true);
+        interval = setInterval(() => markOwed(true), everyMs);
+      },
+      demo ? DEMO_FIRST_SHOWING_MS : FIRST_SHOWING_MS
+    );
+    return () => {
+      clearTimeout(first);
+      if (interval) clearInterval(interval);
+    };
+  }, [enabled, demo, everyMs, markOwed]);
+
+  // Put an owed showing on air once the strip is free
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-
-    const due = async () => {
+    const poll = setInterval(async () => {
       if (busyRef.current) {
-        schedule(BUSY_RETRY_MS, due);
+        notBeforeRef.current = Date.now() + barsAfterMoment;
         return;
       }
+      if (!owedRef.current || visibleRef.current || Date.now() < notBeforeRef.current) return;
+      markOwed(false);
       try {
         const next = demo ? DEMO_STANDINGS : await fetchStandings(section, team, controller.signal);
-        if (next.top.length === 0) throw new Error("empty table");
+        if (next.top.length === 0) return;
         setStandings(next);
-        setVisible(true);
-        // The next showing is booked when this one finishes (see `done`).
+        markVisible(true);
       } catch {
-        if (!controller.signal.aborted) schedule(everyMs, due);
+        // Skip this turn; the next slot tries again
       }
-    };
-    dueRef.current = due;
-
-    schedule(demo ? DEMO_FIRST_SHOWING_MS : FIRST_SHOWING_MS, due);
+    }, POLL_MS);
     return () => {
       controller.abort();
-      if (timerRef.current) clearTimeout(timerRef.current);
+      clearInterval(poll);
     };
-  }, [enabled, demo, section, team, everyMs, schedule]);
+  }, [enabled, demo, section, team, barsAfterMoment, markOwed, markVisible]);
 
-  const done = useCallback(() => {
-    setVisible(false);
-    schedule(everyMs, () => dueRef.current());
-  }, [everyMs, schedule]);
+  // An alert cuts the table; it is owed again and returns after the alert
+  useEffect(() => {
+    if (alert && visibleRef.current) {
+      markVisible(false);
+      markOwed(true);
+    }
+  }, [alert, markOwed, markVisible]);
 
-  return { standings: visible ? standings : null, done };
+  const done = useCallback(() => markVisible(false), [markVisible]);
+
+  return {
+    standings: visible ? standings : null,
+    /** A showing is owed or on air — the demo's callouts hold off meanwhile. */
+    pending: owed || visible,
+    done,
+  };
 }

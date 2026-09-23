@@ -204,9 +204,27 @@
 .banner-track {
   display: flex;
   align-items: center;
-  gap: 28px;
-  padding: 0 40px 0 26px;
+  padding-left: 26px;
   will-change: transform;
+}
+
+/* One copy of the table; three sit end to end so the crawl can loop */
+.banner-cycle {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding-right: 28px;
+  flex-shrink: 0;
+}
+
+/* Marks where the table starts over */
+.banner-loop {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  background: var(--gold);
+  transform: rotate(45deg);
+  opacity: 0.8;
 }
 
 .standing {
@@ -217,14 +235,34 @@
 }
 
 .standing-rank {
-  min-width: 1.6em;
-  text-align: right;
   font-family: "Sora", var(--app-font);
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
-  color: var(--muted);
+  color: var(--cream);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Units and ordinal suffixes: small, so the numbers stay the story */
+.standing-rank small,
+.standing-mp small,
+.standing-gp small {
+  margin-left: 2px;
+  font-family: "Outfit", var(--app-font);
+  font-weight: 700;
+  font-size: 0.5em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 0.55em;
+  color: var(--muted);
+}
+
+.standing-mp small,
+.standing-gp small {
+  margin-left: 4px;
+  vertical-align: baseline;
+  font-size: 0.46em;
 }
 
 .standing-flag {
