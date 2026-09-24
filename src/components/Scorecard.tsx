@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { TrackedGame } from "../types";
 import { teamCode } from "../lib/feds";
-import { matchScore, matchWinShare, opponentOf } from "../lib/teamScore";
+import { matchPredictionShare, matchScore, opponentOf } from "../lib/teamScore";
 import "./Scorecard.css";
 
 /**
  * A match at a glance: the two federations, the points already on the board,
- * and a bar for each side's chance of winning the match from the boards as
- * they stand — full once a team has it sewn up. The bar carries no number on
- * purpose — on air, a second figure next to the real score reads as a
- * contradiction.
+ * and a bar for where the match is heading — each board's eval read as a
+ * result (equal, slightly better, better, winning), added up; full once that
+ * predicts a match win. The bar carries no number on purpose — on air, a
+ * second figure next to the real score reads as a contradiction.
  */
 
 interface ScorecardProps {
@@ -94,7 +94,7 @@ export function Scorecard({
 }: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
-  const share = matchWinShare(games, team);
+  const share = matchPredictionShare(games, team);
 
   return (
     <div className={boxed ? "score-card is-box" : "score-card"}>
@@ -106,7 +106,7 @@ export function Scorecard({
       </div>
 
       {showProjection && (
-        <div className="score-bar" aria-label="Chance of winning the match">
+        <div className="score-bar" aria-label="Where the match is heading">
           <div className="score-bar-us" style={{ transform: `scaleX(${share})` }} />
           <div className="score-bar-half" />
         </div>

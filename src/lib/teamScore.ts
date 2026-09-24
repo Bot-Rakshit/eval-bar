@@ -1,6 +1,5 @@
 import { TrackedGame } from "../types";
 import { teamMatches } from "../hooks/useTeamRound";
-import { evalWdlWhite, Wdl } from "./intel/winPercentage";
 
 /** 2.5 → "2½". Half points are the only fraction a match score can carry. */
 export function formatPoints(points: number): string {
@@ -38,45 +37,46 @@ export function opponentOf(games: TrackedGame[], team: string): string {
   return "";
 }
 
-/** One board's outcome for the team: finished games are certain. */
-function boardWdl(game: TrackedGame, team: string): Wdl {
-  let white: Wdl;
-  if (game.result === "1-0") white = { win: 1, draw: 0, loss: 0 };
-  else if (game.result === "0-1") white = { win: 0, draw: 0, loss: 1 };
-  else if (game.result === "1/2-1/2") white = { win: 0, draw: 1, loss: 0 };
-  else white = evalWdlWhite(game.evaluation, game.mateIn);
-  return teamMatches(game.whiteTeam, team) ? white : { win: white.loss, draw: white.draw, loss: white.win };
+/**
+ * What an eval says a board is heading for, in the standard annotation bands:
+ * equal (±0.3), slightly better (to 0.7), clearly better (to 1.5), winning
+ * (beyond). Each band is counted as a share of the point for the side ahead.
+ * Winning is 0.9, not 1, so one winning board alone does not settle a match
+ * but two do.
+ */
+const EVAL_BANDS: Array<{ upTo: number; points: number }> = [
+  { upTo: 0.3, points: 0.5 }, // equal
+  { upTo: 0.7, points: 0.6 }, // slightly better
+  { upTo: 1.5, points: 0.75 }, // clearly better
+  { upTo: Infinity, points: 0.9 }, // winning
+];
+
+/** The points a board is heading for, from the team's side. */
+function predictedBoardPoints(game: TrackedGame, team: string): number {
+  let white: number;
+  if (game.result === "1-0") white = 1;
+  else if (game.result === "0-1") white = 0;
+  else if (game.result === "1/2-1/2") white = 0.5;
+  else if (game.mateIn !== null) white = game.mateIn > 0 ? 1 : 0;
+  else if (game.evaluation === null) white = 0.5;
+  else {
+    const size = Math.abs(game.evaluation);
+    const ahead = EVAL_BANDS.find((band) => size <= band.upTo)!.points;
+    white = game.evaluation >= 0 ? ahead : 1 - ahead;
+  }
+  return teamMatches(game.whiteTeam, team) ? white : 1 - white;
 }
 
 /**
- * The team's chance of winning the match, 0..1, from the boards as they stand:
- * P(win the match) + ½·P(tie it). Each board's win/draw/loss chance comes from
- * its result or its current eval; the boards are combined into the full spread
- * of match scores, so a team that has 2½ of 4 already reads 1, a match
- * heading for 2–2 reads ½, and a 2–1 lead with a level last game reads high —
- * a draw there wins it. No ratings, no forecast beyond the evals on the boards.
+ * Where the match is heading, 0..1 for the team: each board's result or
+ * current eval band is read as a result, they are added up into a predicted
+ * match score, and the bar shows it — half at 2–2, full once the prediction
+ * reaches 2½ (a match win), empty at 1½. So two winning boards and two equal
+ * ones (about 3–1) read full; two winning and two losing (2–2) read half.
  */
-export function matchWinShare(games: TrackedGame[], team: string): number {
+export function matchPredictionShare(games: TrackedGame[], team: string): number {
   if (games.length === 0) return 0.5;
-  // Distribution over the team's total, counted in half points
-  let spread = [1];
-  for (const game of games) {
-    const { win, draw, loss } = boardWdl(game, team);
-    const next = new Array(spread.length + 2).fill(0);
-    spread.forEach((p, halves) => {
-      next[halves] += p * loss;
-      next[halves + 1] += p * draw;
-      next[halves + 2] += p * win;
-    });
-    spread = next;
-  }
-  // Out of 2 half points per board: more than half the total wins the match
-  const half = games.length;
-  let win = 0;
-  let tie = 0;
-  spread.forEach((p, halves) => {
-    if (halves > half) win += p;
-    else if (halves === half) tie += p;
-  });
-  return win + tie / 2;
+  const predicted = games.reduce((sum, game) => sum + predictedBoardPoints(game, team), 0);
+  const half = games.length / 2;
+  return Math.min(1, Math.max(0, predicted - (half - 0.5)));
 }

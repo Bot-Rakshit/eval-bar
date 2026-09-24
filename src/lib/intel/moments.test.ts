@@ -1,7 +1,7 @@
 import { emptyTrackedGame, TrackedGame } from "../../types";
 import { detectMoments, freshMemory, projectedScore } from "./moments";
-import { classifyMove, evalWdlWhite, expectedScoreWhite, winPercentageFromCp } from "./winPercentage";
-import { matchWinShare } from "../teamScore";
+import { classifyMove, expectedScoreWhite, winPercentageFromCp } from "./winPercentage";
+import { matchPredictionShare } from "../teamScore";
 
 const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 const AFTER_E4 = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1";
@@ -100,35 +100,37 @@ describe("expectedScoreWhite", () => {
   });
 });
 
-describe("match win bar", () => {
-  const vs = (overrides: Partial<TrackedGame>) => game({ evaluation: 0, ...overrides });
+describe("match prediction bar", () => {
+  const board = (evaluation: number | null, overrides: Partial<TrackedGame> = {}) => game({ evaluation, ...overrides });
+  const share = (games: TrackedGame[]) => matchPredictionShare(games, "India");
   const usAsBlack = { whiteTeam: "United States of America", blackTeam: "India" };
 
-  it("gives each board symmetric win/draw/loss chances at a level eval", () => {
-    const { win, draw, loss } = evalWdlWhite(0, null);
-    expect(win).toBeCloseTo(loss);
-    expect(win + draw + loss).toBeCloseTo(1);
+  it("reads full for two winning boards and two equal ones — about 3–1", () => {
+    expect(share([board(2.5), board(3), board(0.1), board(-0.2)])).toBe(1);
+  });
+
+  it("reads half for two winning and two losing — heading for 2–2", () => {
+    expect(share([board(2.5), board(3), board(-2.5), board(-3)])).toBeCloseTo(0.5);
   });
 
   it("sits level before the round, when no board has an eval", () => {
-    const games = [0, 1, 2, 3].map(() => vs({ evaluation: null }));
-    expect(matchWinShare(games, "India")).toBeCloseTo(0.5);
+    expect(share([board(null), board(null), board(null), board(null)])).toBeCloseTo(0.5);
   });
 
-  it("is full once the team has 2½ of 4, whatever the live boards say", () => {
-    const games = [vs({ result: "1-0" }), vs({ result: "1-0" }), vs({ result: "1/2-1/2" }), vs({ evaluation: -5 })];
-    expect(matchWinShare(games, "India")).toBe(1);
+  it("tells slightly better from better from winning", () => {
+    const one = (evaluation: number) => share([board(evaluation), board(0), board(0), board(0)]);
+    expect(one(0.5)).toBeCloseTo(0.6); // slightly better
+    expect(one(1.0)).toBeCloseTo(0.75); // clearly better
+    expect(one(2.0)).toBeCloseTo(0.9); // winning
   });
 
-  it("is empty once the opponent has it — with India on the black side", () => {
-    const games = [0, 1, 2].map(() => vs({ ...usAsBlack, result: "1-0" as const })).concat(vs({ evaluation: 0 }));
-    expect(matchWinShare(games, "India")).toBe(0);
+  it("reads each board from India's side, whichever colour India has", () => {
+    // India has Black and White is -2.5: India is winning those two
+    expect(share([board(-2.5, usAsBlack), board(-3, usAsBlack), board(0), board(0)])).toBe(1);
   });
 
-  it("reads high for a 2–1 lead with a level last game, since a draw wins it", () => {
-    const games = [vs({ result: "1-0" }), vs({ result: "1-0" }), vs({ result: "0-1" }), vs({ evaluation: 0 })];
-    const share = matchWinShare(games, "India");
-    expect(share).toBeGreaterThan(0.8);
-    expect(share).toBeLessThan(1);
+  it("counts finished games as their result", () => {
+    // Already 2½ of 4: decided, whatever the live boards say
+    expect(share([board(0, { result: "1-0" }), board(0, { result: "1-0" }), board(0, { result: "1/2-1/2" }), board(-5)])).toBe(1);
   });
 });
