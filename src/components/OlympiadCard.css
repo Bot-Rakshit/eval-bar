@@ -14,17 +14,13 @@
 
   --move: #f9f1da;
 
-  /*
-   * The bar is a team bar, not a colour bar: the followed team always sits on
-   * the left and fills in its gold, the opponent's share is the blue. Cream and
-   * near-black would read as White and Black — wrong on every board where the
-   * team has the black pieces.
-   */
-  --bar-us: #e4c372;
-  --bar-them: #22405f;
+  /* Eval bar — Chessiro's game-review bar, recoloured for this card. The
+     followed team's share fills from the left. */
+  --bar-us: #f9f1da;
+  --bar-them: #2c2717;
   /* Same line as the notch, so the two quiet edges stay together */
   --bar-stroke: var(--notch-stroke);
-  --eval-on-us: #071a30;
+  --eval-on-us: #000000;
   --eval-on-them: #f9f1da;
 
   --clock: #ffffff;

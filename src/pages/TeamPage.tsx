@@ -98,9 +98,9 @@ export default function TeamPage() {
   const scale = Number(params.get("scale")) || 1.6;
   const demo = params.get("demo") === "1";
   const momentsEnabled = params.get("moments") !== "0";
-  // Minutes between standings showings (default 7); ?standings=0 turns them off
+  // Minutes between standings showings (default 15); ?standings=0 turns them off
   const standingsParam = params.get("standings");
-  const standingsEvery = standingsParam === null ? 7 : Math.max(0, Number(standingsParam) || 0);
+  const standingsEvery = standingsParam === null ? 15 : Math.max(0, Number(standingsParam) || 0);
   // Any tour id inside another team event's broadcast group works here
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 

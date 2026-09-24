@@ -60,18 +60,29 @@ export function expectedScoreWhite(
 }
 
 /**
- * The eval alone as a score for White, 0..1, for display. Same Olympiad data
- * as above with the ratings left out, fitted without a bias term so that 0.00
- * reads exactly level. Scores results more accurately than the Lichess curve
- * (Brier 0.126 against 0.137) while staying a pure function of the eval.
+ * Win / draw / loss chances for White on one board from the eval alone — a
+ * symmetric ordered logit, P(win) = σ(a·x − t), P(loss) = σ(−a·x − t), the
+ * rest a draw. Fitted to the 46th Olympiad's evenly matched games (within 100
+ * Elo, 3,370 positions), because that is who plays on India's boards: there a
+ * level position is drawn about half the time, against a third across the
+ * whole event, and it is the draw rate that decides how a close match looks.
+ * Calibrated to within a few points in every eval band.
  */
-const DISPLAY_EVAL_SLOPE = 0.9087; // per pawn
+const WDL_SLOPE = 0.98; // a, per pawn
+const WDL_DRAW_BAND = 1.02; // t
 
-export function evalScoreWhite(evaluation: number | null, mateIn: number | null): number {
-  if (mateIn !== null) return mateIn > 0 ? 1 : 0;
-  if (evaluation === null) return 0.5;
-  const pawns = Math.min(10, Math.max(-10, evaluation));
-  return 1 / (1 + Math.exp(-DISPLAY_EVAL_SLOPE * pawns));
+export interface Wdl {
+  win: number;
+  draw: number;
+  loss: number;
+}
+
+export function evalWdlWhite(evaluation: number | null, mateIn: number | null): Wdl {
+  if (mateIn !== null) return mateIn > 0 ? { win: 1, draw: 0, loss: 0 } : { win: 0, draw: 0, loss: 1 };
+  const pawns = Math.min(10, Math.max(-10, evaluation ?? 0));
+  const win = 1 / (1 + Math.exp(-(WDL_SLOPE * pawns - WDL_DRAW_BAND)));
+  const loss = 1 / (1 + Math.exp(-(-WDL_SLOPE * pawns - WDL_DRAW_BAND)));
+  return { win, draw: Math.max(0, 1 - win - loss), loss };
 }
 
 /** Expected points for White from a win percentage. */

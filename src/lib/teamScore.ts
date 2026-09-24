@@ -1,6 +1,6 @@
 import { TrackedGame } from "../types";
 import { teamMatches } from "../hooks/useTeamRound";
-import { evalScoreWhite } from "./intel/winPercentage";
+import { evalWdlWhite, Wdl } from "./intel/winPercentage";
 
 /** 2.5 → "2½". Half points are the only fraction a match score can carry. */
 export function formatPoints(points: number): string {
@@ -38,23 +38,45 @@ export function opponentOf(games: TrackedGame[], team: string): string {
   return "";
 }
 
+/** One board's outcome for the team: finished games are certain. */
+function boardWdl(game: TrackedGame, team: string): Wdl {
+  let white: Wdl;
+  if (game.result === "1-0") white = { win: 1, draw: 0, loss: 0 };
+  else if (game.result === "0-1") white = { win: 0, draw: 0, loss: 1 };
+  else if (game.result === "1/2-1/2") white = { win: 0, draw: 1, loss: 0 };
+  else white = evalWdlWhite(game.evaluation, game.mateIn);
+  return teamMatches(game.whiteTeam, team) ? white : { win: white.loss, draw: white.draw, loss: white.win };
+}
+
 /**
- * The match as the engine sees it right now, 0..1 for the team: finished games
- * count their result, live ones their current eval, games with no eval yet
- * count level. No ratings and no forecast — just the boards as they stand.
+ * The team's chance of winning the match, 0..1, from the boards as they stand:
+ * P(win the match) + ½·P(tie it). Each board's win/draw/loss chance comes from
+ * its result or its current eval; the boards are combined into the full spread
+ * of match scores, so a team that has 2½ of 4 already reads 1, a match
+ * heading for 2–2 reads ½, and a 2–1 lead with a level last game reads high —
+ * a draw there wins it. No ratings, no forecast beyond the evals on the boards.
  */
-export function matchEvalShare(games: TrackedGame[], team: string): number {
+export function matchWinShare(games: TrackedGame[], team: string): number {
   if (games.length === 0) return 0.5;
-  let us = 0;
+  // Distribution over the team's total, counted in half points
+  let spread = [1];
   for (const game of games) {
-    const white = game.result
-      ? game.result === "1-0"
-        ? 1
-        : game.result === "0-1"
-          ? 0
-          : 0.5
-      : evalScoreWhite(game.evaluation, game.mateIn);
-    us += teamMatches(game.whiteTeam, team) ? white : 1 - white;
+    const { win, draw, loss } = boardWdl(game, team);
+    const next = new Array(spread.length + 2).fill(0);
+    spread.forEach((p, halves) => {
+      next[halves] += p * loss;
+      next[halves + 1] += p * draw;
+      next[halves + 2] += p * win;
+    });
+    spread = next;
   }
-  return us / games.length;
+  // Out of 2 half points per board: more than half the total wins the match
+  const half = games.length;
+  let win = 0;
+  let tie = 0;
+  spread.forEach((p, halves) => {
+    if (halves > half) win += p;
+    else if (halves === half) tie += p;
+  });
+  return win + tie / 2;
 }
