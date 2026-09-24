@@ -44,15 +44,20 @@ export function opponentOf(games: TrackedGame[], team: string): string {
  * Winning is 0.9, not 1, so one winning board alone does not settle a match
  * but two do.
  */
-const EVAL_BANDS: Array<{ upTo: number; points: number }> = [
-  { upTo: 0.3, points: 0.5 }, // equal
-  { upTo: 0.7, points: 0.6 }, // slightly better
-  { upTo: 1.5, points: 0.75 }, // clearly better
-  { upTo: Infinity, points: 0.9 }, // winning
+export const EVAL_BANDS: Array<{ upTo: number; points: number; label: string }> = [
+  { upTo: 0.3, points: 0.5, label: "Equal" },
+  { upTo: 0.7, points: 0.6, label: "Slightly better" },
+  { upTo: 1.5, points: 0.75, label: "Clearly better" },
+  { upTo: Infinity, points: 0.9, label: "Winning" },
 ];
 
+/** The band an eval falls in, for the side it favours. */
+export function evalBand(evaluation: number) {
+  return EVAL_BANDS.find((band) => Math.abs(evaluation) <= band.upTo)!;
+}
+
 /** The points a board is heading for, from the team's side. */
-function predictedBoardPoints(game: TrackedGame, team: string): number {
+export function predictedBoardPoints(game: TrackedGame, team: string): number {
   let white: number;
   if (game.result === "1-0") white = 1;
   else if (game.result === "0-1") white = 0;
@@ -60,8 +65,7 @@ function predictedBoardPoints(game: TrackedGame, team: string): number {
   else if (game.mateIn !== null) white = game.mateIn > 0 ? 1 : 0;
   else if (game.evaluation === null) white = 0.5;
   else {
-    const size = Math.abs(game.evaluation);
-    const ahead = EVAL_BANDS.find((band) => size <= band.upTo)!.points;
+    const ahead = evalBand(game.evaluation).points;
     white = game.evaluation >= 0 ? ahead : 1 - ahead;
   }
   return teamMatches(game.whiteTeam, team) ? white : 1 - white;

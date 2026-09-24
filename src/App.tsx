@@ -5,6 +5,7 @@ import ControlPage from "./pages/ControlPage";
 import ViewPage from "./pages/ViewPage";
 import TeamPage from "./pages/TeamPage";
 import ScorecardPage from "./pages/ScorecardPage";
+import ScorecardPlayground from "./pages/ScorecardPlayground";
 import CcmPage from "./pages/CcmPage";
 import MessagePage from "./pages/MessagePage";
 
@@ -19,6 +20,7 @@ function AppRoutes() {
       <Route path="/messagedisplay" element={<MessagePage />} />
       <Route path="/broadcast/:stateData" element={<ViewPage />} />
       <Route path="/olympiad/:section" element={<TeamPage />} />
+      <Route path="/scorecard/play" element={<ScorecardPlayground />} />
       <Route path="/scorecard/:section" element={<ScorecardPage />} />
     </Routes>
   );
