@@ -125,10 +125,10 @@ describe("match prediction bar", () => {
 
   it("tells slightly better from better from winning", () => {
     const one = (evaluation: number) => share([board(evaluation), board(0), board(0), board(0)]);
-    expect(one(0.9)).toBeCloseTo(0.5); // still equal
-    expect(one(1.5)).toBeCloseTo(0.6); // slightly better
-    expect(one(2.5)).toBeCloseTo(0.75); // clearly better
-    expect(one(3.5)).toBeCloseTo(0.9); // winning
+    expect(one(0.7)).toBeCloseTo(0.5); // still equal
+    expect(one(1.2)).toBeCloseTo(0.6); // slightly better
+    expect(one(2.0)).toBeCloseTo(0.75); // clearly better
+    expect(one(3.0)).toBeCloseTo(0.9); // winning
   });
 
   it("reads each board from India's side, whichever colour India has", () => {

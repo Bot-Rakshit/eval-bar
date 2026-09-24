@@ -39,8 +39,8 @@ export function opponentOf(games: TrackedGame[], team: string): string {
 
 /**
  * What an eval says a board is heading for, counted as a share of the point
- * for the side ahead: equal within ±1.0, slightly better to 2.0, clearly
- * better to 3.0, winning beyond.
+ * for the side ahead: equal within ±0.8, slightly better to 1.5, clearly
+ * better to 2.5, winning beyond.
  *
  * The equal band is wide on purpose. Out of the opening an engine routinely
  * shows White +0.3 to +0.8, and in a team match the followed team has Black on
@@ -52,9 +52,9 @@ export function opponentOf(games: TrackedGame[], team: string): string {
  * does not settle a match but two do.
  */
 export const EVAL_BANDS: Array<{ upTo: number; points: number; label: string }> = [
-  { upTo: 1.0, points: 0.5, label: "Equal" },
-  { upTo: 2.0, points: 0.6, label: "Slightly better" },
-  { upTo: 3.0, points: 0.75, label: "Clearly better" },
+  { upTo: 0.8, points: 0.5, label: "Equal" },
+  { upTo: 1.5, points: 0.6, label: "Slightly better" },
+  { upTo: 2.5, points: 0.75, label: "Clearly better" },
   { upTo: Infinity, points: 0.9, label: "Winning" },
 ];
 
