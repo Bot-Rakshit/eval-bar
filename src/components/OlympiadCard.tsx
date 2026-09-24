@@ -170,25 +170,21 @@ function whitePercent(evaluation: number | null, mateIn: number | null): number 
   return Math.min(100, Math.max(0, 100 / (1 + Math.exp(-0.4 * evaluation))));
 }
 
-/**
- * The advantage as a size, not a signed White-relative eval: it is printed in
- * the leading side's part of the bar, so "+1.6" there means that side is 1.6
- * up — whichever colour it has.
- */
-function formatAdvantage(evaluation: number | null, mateIn: number | null): string {
+function formatEval(evaluation: number | null, mateIn: number | null): string {
   if (mateIn !== null) return mateIn === 0 ? "#" : `M${Math.abs(mateIn)}`;
   if (evaluation === null) return "—";
-  const size = Math.abs(evaluation);
-  if (size < 0.05) return "0.0";
-  return size >= 10 ? `+${Math.round(size)}` : `+${size.toFixed(1)}`;
+  if (Math.abs(evaluation) >= 10) {
+    return evaluation > 0 ? `+${Math.round(evaluation)}` : `${Math.round(evaluation)}`;
+  }
+  return evaluation > 0 ? `+${evaluation.toFixed(1)}` : evaluation.toFixed(1);
 }
 
-/** A decided game from the left side's point of view: "1–0" is a left win. */
-function resultLeftRight(result: string, leftIsWhite: boolean): string {
-  if (result === "1/2-1/2") return "½–½";
-  const whiteWon = result === "1-0";
-  return whiteWon === leftIsWhite ? "1–0" : "0–1";
-}
+/** Once a game is decided the bar and clocks go; only this remains. */
+const RESULT_LABELS: Record<string, string> = {
+  "1-0": "1-0",
+  "0-1": "0-1",
+  "1/2-1/2": "½-½",
+};
 
 function formatClock(seconds: number): string {
   if (seconds < 1) return "0:00:00";
@@ -361,7 +357,7 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
             <span className="oly-name is-muted">Board {board}</span>
           </div>
           <div className="oly-bar">
-            <div className="oly-bar-us" style={{ transform: "scaleX(0.5)" }} />
+            <div className="oly-bar-white" style={{ transform: "scaleX(0.5)" }} />
           </div>
           <div className="oly-clocks">
             <MonoTime text="1:30:00" className="is-muted" />
@@ -372,27 +368,18 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
     );
   }
 
-  // The followed team always sits on the left, whatever colour it has on this
-  // board; everything below is laid out left/right, not White/Black.
-  const leftIsWhite = !(isTeam(game.blackTeam, team) && !isTeam(game.whiteTeam, team));
-  const leftIsTeam = isTeam(leftIsWhite ? game.whiteTeam : game.blackTeam, team);
-  const rightIsTeam = isTeam(leftIsWhite ? game.blackTeam : game.whiteTeam, team);
+  const whiteIsTeam = isTeam(game.whiteTeam, team);
+  const blackIsTeam = isTeam(game.blackTeam, team);
 
-  const whiteShare = whitePercent(game.evaluation, game.mateIn);
-  const leftShare = leftIsWhite ? whiteShare : 100 - whiteShare;
-  const label = formatAdvantage(game.evaluation, game.mateIn);
+  const percent = whitePercent(game.evaluation, game.mateIn);
+  const label = formatEval(game.evaluation, game.mateIn);
   // Same threshold Chessiro uses, so the label swaps sides only once settled.
-  const rightLeads = leftShare < 49.8;
+  const blackLeads = percent < 49.8;
 
   const liveWhite = turn === "white" && !result ? game.whiteClock - elapsed : game.whiteClock;
   const liveBlack = turn === "black" && !result ? game.blackClock - elapsed : game.blackClock;
-  const leftClock = leftIsWhite ? liveWhite : liveBlack;
-  const rightClock = leftIsWhite ? liveBlack : liveWhite;
   const clocksUnknown = game.whiteClock === 0 && game.blackClock === 0;
   const clockText = (value: number) => (clocksUnknown ? "–:––:––" : formatClock(Math.max(0, value)));
-
-  const leftName = formatPlayerName(leftIsWhite ? game.whitePlayer : game.blackPlayer, true);
-  const rightName = formatPlayerName(leftIsWhite ? game.blackPlayer : game.whitePlayer, true);
 
   return (
     <div className="oly-card" style={{ width: CARD_W, height: CARD_H }}>
@@ -402,28 +389,34 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
       </span>
       <div className="oly-body">
         <div className="oly-names">
-          <PlayerName name={leftName} className={leftIsTeam ? "oly-name is-team" : "oly-name"} />
+          <PlayerName
+            name={formatPlayerName(game.whitePlayer, true)}
+            className={whiteIsTeam ? "oly-name is-team" : "oly-name"}
+          />
           {gutter}
-          <PlayerName name={rightName} className={rightIsTeam ? "oly-name is-team" : "oly-name"} />
+          <PlayerName
+            name={formatPlayerName(game.blackPlayer, true)}
+            className={blackIsTeam ? "oly-name is-team" : "oly-name"}
+          />
         </div>
 
         {result ? (
-          <div className="oly-result">{resultLeftRight(result, leftIsWhite)}</div>
+          <div className="oly-result">{RESULT_LABELS[result] ?? result}</div>
         ) : (
           <>
             <div className="oly-bar">
-              <div className="oly-bar-us" style={{ transform: `scaleX(${leftShare / 100})` }} />
+              <div className="oly-bar-white" style={{ transform: `scaleX(${percent / 100})` }} />
               <span
-                className="oly-eval on-us"
-                style={{ opacity: rightLeads ? 0 : 1 }}
-                aria-hidden={rightLeads}
+                className="oly-eval on-white"
+                style={{ opacity: blackLeads ? 0 : 1 }}
+                aria-hidden={blackLeads}
               >
                 {label}
               </span>
               <span
-                className="oly-eval on-them"
-                style={{ opacity: rightLeads ? 1 : 0 }}
-                aria-hidden={!rightLeads}
+                className="oly-eval on-black"
+                style={{ opacity: blackLeads ? 1 : 0 }}
+                aria-hidden={!blackLeads}
               >
                 {label}
               </span>
@@ -431,12 +424,12 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
 
             <div className="oly-clocks">
               <MonoTime
-                text={clockText(leftClock)}
-                className={`${leftIsTeam ? "is-team" : ""} ${!clocksUnknown && leftClock <= 30 ? "is-low" : ""}`}
+                text={clockText(liveWhite)}
+                className={`${whiteIsTeam ? "is-team" : ""} ${!clocksUnknown && liveWhite <= 30 ? "is-low" : ""}`}
               />
               <MonoTime
-                text={clockText(rightClock)}
-                className={`${rightIsTeam ? "is-team" : ""} ${!clocksUnknown && rightClock <= 30 ? "is-low" : ""}`}
+                text={clockText(liveBlack)}
+                className={`${blackIsTeam ? "is-team" : ""} ${!clocksUnknown && liveBlack <= 30 ? "is-low" : ""}`}
               />
             </div>
           </>

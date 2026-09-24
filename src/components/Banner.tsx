@@ -18,21 +18,11 @@ function Flag({ team, className, fed }: { team: string; className: string; fed?:
   );
 }
 
-function sameTeam(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
-}
-
-/**
- * The eval from the followed team's side — "+1.6" means the team is better,
- * whichever colour its player has. A White-relative number reads backwards on
- * every board where the team has Black.
- */
-function formatEval(game: TrackedGame, team: string): string | null {
-  const teamIsBlack = sameTeam(game.blackTeam, team) && !sameTeam(game.whiteTeam, team);
-  const flip = teamIsBlack ? -1 : 1;
-  if (game.mateIn !== null) return `${game.mateIn * flip > 0 ? "+" : "−"}M${Math.abs(game.mateIn)}`;
+/** The standard eval: from White's side, "+1.6" White better, "−1.6" Black. */
+function formatEval(game: TrackedGame): string | null {
+  if (game.mateIn !== null) return `${game.mateIn > 0 ? "+" : "−"}M${Math.abs(game.mateIn)}`;
   if (game.evaluation === null) return null;
-  const value = game.evaluation * flip;
+  const value = game.evaluation;
   if (Math.abs(value) < 0.05) return "0.0";
   const size = Math.abs(value) >= 10 ? `${Math.round(Math.abs(value))}` : Math.abs(value).toFixed(1);
   return `${value > 0 ? "+" : "−"}${size}`;
@@ -47,26 +37,20 @@ function formatClock(seconds: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(secs)}` : `${minutes}:${pad(secs)}`;
 }
 
-/** A result from the followed team's side: "1–0" is a team win. */
-function formatResult(game: TrackedGame, team: string): string {
-  if (game.result === "1/2-1/2") return "½–½";
-  const teamIsBlack = sameTeam(game.blackTeam, team) && !sameTeam(game.whiteTeam, team);
-  const whiteWon = game.result === "1-0";
-  return whiteWon !== teamIsBlack ? "1–0" : "0–1";
-}
+const RESULT_TEXT: Record<string, string> = { "1-0": "1–0", "0-1": "0–1", "1/2-1/2": "½–½" };
 
 /**
  * The one hard fact in the corner: the result for a finished game, the clock
  * for time trouble, the eval for anything the engine called.
  */
-function factFor(active: ActiveMoment, team: string): string | null {
+function factFor(active: ActiveMoment): string | null {
   const { game, moment } = active;
-  if (game.result) return formatResult(game, team);
+  if (game.result) return RESULT_TEXT[game.result] ?? null;
   const label = moment.label.toLowerCase();
   if (label.includes("minute") || label.includes("time")) {
     return formatClock(moment.side === "white" ? game.whiteClock : game.blackClock);
   }
-  return formatEval(game, team);
+  return formatEval(game);
 }
 
 /**
@@ -74,7 +58,7 @@ function factFor(active: ActiveMoment, team: string): string | null {
  * the board and the one hard fact at the right. Sized to the board strip and
  * laid over it.
  */
-export function MomentBanner({ active, board, team }: { active: ActiveMoment; board: number; team: string }) {
+export function MomentBanner({ active, board }: { active: ActiveMoment; board: number }) {
   const { moment, game } = active;
   const [leaving, setLeaving] = useState(false);
 
@@ -86,7 +70,7 @@ export function MomentBanner({ active, board, team }: { active: ActiveMoment; bo
 
   // The player's own team, for the flag — not necessarily the followed one
   const subjectTeam = moment.side === "white" ? game.whiteTeam : game.blackTeam;
-  const fact = factFor(active, team);
+  const fact = factFor(active);
 
   return (
     <div
