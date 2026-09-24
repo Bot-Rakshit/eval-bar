@@ -14,7 +14,8 @@ export default function ScorecardPage() {
   const [params] = useSearchParams();
   const team = params.get("team")?.trim() || DEFAULT_TEAM;
   // Default is chroma green for keying; ?bg=1 previews on the Olympiad backdrop,
-  // ?bg=transparent relies on OBS browser-source alpha instead.
+  // ?bg=transparent relies on OBS browser-source alpha instead — the better
+  // choice, since keying also removes the green in flags like India's.
   const bgMode =
     params.get("bg") === "1" ? "backdrop" : params.get("bg") === "transparent" ? "transparent" : "chroma";
   const align = params.get("align") ?? "center";
@@ -22,6 +23,9 @@ export default function ScorecardPage() {
   const demo = params.get("demo") === "1";
   const showProjection = params.get("proj") !== "0";
   const showFlags = params.get("flags") !== "0";
+  // ?frame=box: a rectangular card to crop to, when the capture can't carry
+  // transparency and keying would eat the green in the flags
+  const boxed = params.get("frame") === "box";
   const anchorTour = params.get("anchor")?.trim() || OLYMPIAD_ANCHOR_TOUR;
 
   const { sectionInfo, games: liveGames } = useOlympiadTeam({ section, team, anchorTour, demo });
@@ -45,6 +49,7 @@ export default function ScorecardPage() {
           showProjection={showProjection}
           showFlags={showFlags}
           section={sectionInfo.label}
+          boxed={boxed}
         />
       </div>
     </div>

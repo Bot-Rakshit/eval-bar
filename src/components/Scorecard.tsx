@@ -20,6 +20,11 @@ interface ScorecardProps {
   showFlags?: boolean;
   /** Section name for the tab on the top edge, e.g. "Open" or "Women". */
   section?: string;
+  /**
+   * Square corners, a heavy border and nothing outside it, so the card can be
+   * cropped edge to edge instead of chroma-keyed.
+   */
+  boxed?: boolean;
 }
 
 /** Flags are bundled under /flags, keyed by federation code. */
@@ -84,13 +89,14 @@ export function Scorecard({
   showProjection = true,
   showFlags = true,
   section,
+  boxed = false,
 }: ScorecardProps) {
   const score = matchScore(games, team);
   const opponent = opponentOf(games, team);
   const share = matchEvalShare(games, team);
 
   return (
-    <div className="score-card">
+    <div className={boxed ? "score-card is-box" : "score-card"}>
       {section && <span className="score-tab">{section}</span>}
       <div className="score-match">
         <Side code={teamCode(team)} points={score.us} isTeam showFlag={showFlags} />
