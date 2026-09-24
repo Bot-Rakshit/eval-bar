@@ -29,11 +29,12 @@ const live = (...evals: number[]): Board[] => evals.map((evaluation) => ({ evalu
 
 const PRESETS: Array<{ name: string; boards: Board[] }> = [
   { name: "All level", boards: level() },
-  { name: "2 winning, 2 equal", boards: live(2.5, 3, 0.1, -0.2) },
-  { name: "2 winning, 2 losing", boards: live(2.5, 3, -2.5, -3) },
-  { name: "1 slightly better", boards: live(0.5, 0, 0, 0) },
-  { name: "1 clearly better", boards: live(1, 0, 0, 0) },
-  { name: "1 winning", boards: live(2, 0, 0, 0) },
+  { name: "Normal opening", boards: live(0.47, -0.77, 0.35, -0.01) },
+  { name: "2 winning, 2 equal", boards: live(3.5, 4, 0.1, -0.2) },
+  { name: "2 winning, 2 losing", boards: live(3.5, 4, -3.5, -4) },
+  { name: "1 slightly better", boards: live(1.5, 0, 0, 0) },
+  { name: "1 clearly better", boards: live(2.5, 0, 0, 0) },
+  { name: "1 winning", boards: live(3.5, 0, 0, 0) },
   {
     name: "1–0 up, rest level",
     boards: [{ evaluation: 0, result: "win" }, ...live(0, 0, 0)],

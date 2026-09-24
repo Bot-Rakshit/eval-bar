@@ -105,12 +105,18 @@ describe("match prediction bar", () => {
   const share = (games: TrackedGame[]) => matchPredictionShare(games, "India");
   const usAsBlack = { whiteTeam: "United States of America", blackTeam: "India" };
 
+  it("reads a level opening as level — round 8 v Azerbaijan", () => {
+    // White's evals at moves 5-10, India Black on boards 2 and 4
+    const games = [board(0.47), board(0.77, usAsBlack), board(0.35), board(0.01, usAsBlack)];
+    expect(share(games)).toBeCloseTo(0.5);
+  });
+
   it("reads full for two winning boards and two equal ones — about 3–1", () => {
-    expect(share([board(2.5), board(3), board(0.1), board(-0.2)])).toBe(1);
+    expect(share([board(3.5), board(4), board(0.1), board(-0.2)])).toBe(1);
   });
 
   it("reads half for two winning and two losing — heading for 2–2", () => {
-    expect(share([board(2.5), board(3), board(-2.5), board(-3)])).toBeCloseTo(0.5);
+    expect(share([board(3.5), board(4), board(-3.5), board(-4)])).toBeCloseTo(0.5);
   });
 
   it("sits level before the round, when no board has an eval", () => {
@@ -119,14 +125,15 @@ describe("match prediction bar", () => {
 
   it("tells slightly better from better from winning", () => {
     const one = (evaluation: number) => share([board(evaluation), board(0), board(0), board(0)]);
-    expect(one(0.5)).toBeCloseTo(0.6); // slightly better
-    expect(one(1.0)).toBeCloseTo(0.75); // clearly better
-    expect(one(2.0)).toBeCloseTo(0.9); // winning
+    expect(one(0.9)).toBeCloseTo(0.5); // still equal
+    expect(one(1.5)).toBeCloseTo(0.6); // slightly better
+    expect(one(2.5)).toBeCloseTo(0.75); // clearly better
+    expect(one(3.5)).toBeCloseTo(0.9); // winning
   });
 
   it("reads each board from India's side, whichever colour India has", () => {
-    // India has Black and White is -2.5: India is winning those two
-    expect(share([board(-2.5, usAsBlack), board(-3, usAsBlack), board(0), board(0)])).toBe(1);
+    // India has Black and White is -3.5: India is winning those two
+    expect(share([board(-3.5, usAsBlack), board(-4, usAsBlack), board(0), board(0)])).toBe(1);
   });
 
   it("counts finished games as their result", () => {
