@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
-import { RoundInfo, TournamentSummary } from "../types";
+import { TournamentSummary } from "../types";
 import { fetchLiveTournaments } from "../api/lichess";
+import { isLive, isRecommended, pickCurrentRound, rankTournaments, roundStatus } from "../lib/tournamentRank";
 
 const ACCENT = "#E79D29";
 const ACCENT_STRONG = "#f2b04a";
@@ -194,9 +195,41 @@ function extractRoundIdFromUrl(url: string): string {
   return parts[parts.length - 1] ?? "";
 }
 
-function pickCurrentRound(rounds: RoundInfo[]): RoundInfo | null {
-  return rounds.find((round) => round.ongoing) ?? rounds[0] ?? null;
-}
+const SectionTitle = styled.h3`
+  align-self: flex-start;
+  margin: 1.25rem 0 0.25rem;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: ${TEXT_MUTED};
+`;
+
+const StatusRow = styled.div<{ $live: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8em;
+  font-weight: 700;
+  color: ${(props) => (props.$live ? "#4ade80" : TEXT_MUTED)};
+
+  &::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: ${(props) => (props.$live ? 1 : 0.6)};
+  }
+`;
+
+const Players = styled.p`
+  margin: 0;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: ${TEXT};
+  opacity: 0.85;
+`;
 
 export function TournamentsList({ onSelect }: TournamentsListProps) {
   const [tournaments, setTournaments] = useState<TournamentSummary[]>([]);
@@ -212,11 +245,17 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const filteredTournaments = searchTerm
-    ? tournaments.filter((tournament) =>
-        tournament.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const ranked = useMemo(() => rankTournaments(tournaments), [tournaments]);
+  const query = searchTerm.trim().toLowerCase();
+  const filteredTournaments = query
+    ? ranked.filter(
+        (tournament) =>
+          tournament.name.toLowerCase().includes(query) ||
+          tournament.players.toLowerCase().includes(query)
       )
-    : tournaments;
+    : ranked;
+  const recommended = filteredTournaments.filter(isRecommended);
+  const others = filteredTournaments.filter((tournament) => !isRecommended(tournament));
 
   const selectTournament = (tournament: TournamentSummary) => {
     const round = pickCurrentRound(tournament.rounds);
@@ -231,9 +270,36 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
     onSelect({ tournamentId: roundId, roundId });
   };
 
+  const renderCard = (tournament: TournamentSummary) => (
+    <Card
+      key={tournament.id}
+      selected={selectedTournamentId === tournament.id}
+      onClick={() => selectTournament(tournament)}
+    >
+      <SelectIndicator selected={selectedTournamentId === tournament.id} />
+      {tournament.image && <img className="card-image" src={tournament.image} alt="Tournament" />}
+      <CardHeader>
+        <CardTitle>{tournament.name}</CardTitle>
+      </CardHeader>
+      <StatusRow $live={isLive(tournament)}>{roundStatus(tournament)}</StatusRow>
+      {tournament.players && <Players>{tournament.players}</Players>}
+      {tournament.description && <CardDescription>{tournament.description}</CardDescription>}
+      {tournament.url && (
+        <WebsiteLink
+          href={tournament.url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(event) => event.stopPropagation()}
+        >
+          Official Website
+        </WebsiteLink>
+      )}
+    </Card>
+  );
+
   return (
     <TournamentsWrapper>
-      <Title>Live Broadcasts</Title>
+      <Title>Broadcasts</Title>
       <SearchWrapper>
         <SearchInput
           value={searchTerm}
@@ -252,38 +318,14 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
       {isLoading && <NoBroadcastsMessage>Loading live broadcasts…</NoBroadcastsMessage>}
       {!isLoading && filteredTournaments.length === 0 && (
         <NoBroadcastsMessage>
-          No live broadcasts right now — paste a custom Lichess URL above.
+          No broadcasts live or starting soon — paste a custom Lichess URL above.
         </NoBroadcastsMessage>
       )}
 
-      {filteredTournaments.map((tournament) => (
-        <Card
-          key={tournament.id}
-          selected={selectedTournamentId === tournament.id}
-          onClick={() => selectTournament(tournament)}
-        >
-          <SelectIndicator selected={selectedTournamentId === tournament.id} />
-          {tournament.image && (
-            <img className="card-image" src={tournament.image} alt="Tournament" />
-          )}
-          <CardHeader>
-            <CardTitle>{tournament.name}</CardTitle>
-          </CardHeader>
-          {tournament.description && (
-            <CardDescription>{tournament.description}</CardDescription>
-          )}
-          {tournament.url && (
-            <WebsiteLink
-              href={tournament.url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => event.stopPropagation()}
-            >
-              Official Website
-            </WebsiteLink>
-          )}
-        </Card>
-      ))}
+      {recommended.length > 0 && <SectionTitle>Recommended</SectionTitle>}
+      {recommended.map(renderCard)}
+      {others.length > 0 && recommended.length > 0 && <SectionTitle>All broadcasts</SectionTitle>}
+      {others.map(renderCard)}
     </TournamentsWrapper>
   );
 }

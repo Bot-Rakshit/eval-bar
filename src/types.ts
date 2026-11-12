@@ -47,6 +47,10 @@ export interface TournamentSummary {
   image: string | null;
   url: string;
   rounds: RoundInfo[];
+  /** Lichess's own ranking of the broadcast: 5 = top event, 4 = high, 3 = normal. */
+  tier: number;
+  /** Headline players as Lichess lists them ("Gukesh, Sindarov"), or "". */
+  players: string;
 }
 
 /**

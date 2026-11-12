@@ -8,6 +8,8 @@ interface ApiTour {
   name: string;
   description?: string;
   url?: string;
+  tier?: number;
+  info?: { players?: string };
 }
 
 interface ApiRound {
@@ -70,8 +72,15 @@ function toRoundInfo(round: ApiRound): RoundInfo {
   };
 }
 
-export async function fetchLiveTournaments(): Promise<TournamentSummary[]> {
-  const response = await fetch(`${API_BASE}/broadcast?nb=50`);
+/**
+ * Broadcasts worth offering on the control page: any with a round on now, and
+ * any whose next round starts within UPCOMING_WINDOW_MS, so a broadcaster can
+ * set the overlay up before the round. Ordering is left to rankTournaments.
+ */
+const UPCOMING_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+export async function fetchLiveTournaments(now = Date.now()): Promise<TournamentSummary[]> {
+  const response = await fetch(`${API_BASE}/broadcast?nb=100`);
   if (!response.ok) {
     throw new Error(`Lichess API ${response.status} for broadcast list`);
   }
@@ -87,7 +96,14 @@ export async function fetchLiveTournaments(): Promise<TournamentSummary[]> {
       continue; // tolerate malformed NDJSON lines (OBS browser quirks)
     }
     if (!entry.tour || !entry.rounds || entry.rounds.length === 0) continue;
-    if (!entry.rounds.some((round) => round.ongoing === true)) continue;
+    const live = entry.rounds.some((round) => round.ongoing === true);
+    const startsSoon = entry.rounds.some(
+      (round) =>
+        !round.finished &&
+        typeof round.startsAt === "number" &&
+        round.startsAt - now <= UPCOMING_WINDOW_MS
+    );
+    if (!live && !startsSoon) continue;
     tournaments.push({
       id: entry.tour.id,
       name: entry.tour.name,
@@ -95,6 +111,8 @@ export async function fetchLiveTournaments(): Promise<TournamentSummary[]> {
       image: entry.image ?? null,
       url: entry.tour.url ?? "",
       rounds: entry.rounds.map(toRoundInfo),
+      tier: entry.tour.tier ?? 0,
+      players: entry.tour.info?.players?.trim() ?? "",
     });
   }
   return tournaments;
