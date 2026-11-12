@@ -1,3 +1,5 @@
+import { getSf19FallbackChain, selectSf19Variant } from "./sf19";
+
 const MAX_DEPTH = 18;
 
 export interface EvaluationResult {
@@ -38,7 +40,53 @@ function isValidFen(fen: string): boolean {
   return parts[1] === "w" || parts[1] === "b";
 }
 
-type EngineVersion = "sf18" | "sf17";
+/** One runnable engine build, in the order init should try them. */
+interface EngineBuild {
+  label: string;
+  scriptPath: string;
+  /** Stockfish 18 ships as an ES module worker; the others are classic workers. */
+  module: boolean;
+  /** Value for `setoption name Threads`. */
+  threads: number;
+}
+
+/**
+ * Stockfish 19 first — its builds are self-contained classic workers that
+ * resolve their own .wasm and carry the NNUE inside it, so there is no separate
+ * net to fetch. The 18/17 builds stay on as a fallback.
+ */
+function engineCandidates(): EngineBuild[] {
+  const builds: EngineBuild[] = [];
+
+  const selection = selectSf19Variant();
+  if (selection) {
+    for (const candidate of getSf19FallbackChain(selection)) {
+      builds.push({
+        label: `Stockfish 19 (${candidate.variant})`,
+        scriptPath: candidate.url,
+        module: false,
+        threads: candidate.maxThreads,
+      });
+    }
+  }
+
+  if (hasSharedArrayBuffer()) {
+    builds.push({
+      label: "Stockfish 18",
+      scriptPath: "/engines/stockfish-18-worker.js",
+      module: true,
+      threads: 1,
+    });
+  }
+  builds.push({
+    label: "Stockfish 17.1",
+    scriptPath: "/engines/stockfish-17-lite-single.js",
+    module: false,
+    threads: 1,
+  });
+
+  return builds;
+}
 
 class StockfishEngine {
   private worker: Worker | null = null;
@@ -48,6 +96,20 @@ class StockfishEngine {
   private onEvaluation: ((data: EngineEvalData) => void) | null = null;
   private initPromise: Promise<boolean> | null = null;
   private searchId = 0;
+  /**
+   * `go` commands sent, and `bestmove`s received, on the current worker.
+   * SF19 queues `position`/`go` until the running search has answered
+   * `bestmove`, so after a `stop` the old search still prints its last `info`
+   * lines. Those belong to the previous board; an `info` line is only the
+   * current search's once every earlier `go` has had its `bestmove`.
+   */
+  private goCount = 0;
+  private bestmoveCount = 0;
+  /** Builds that crashed after starting, so init moves on to the next one. */
+  private failedBuilds = new Set<string>();
+  private activeBuild: EngineBuild | null = null;
+  /** The current search's latest score, finalised when its bestmove lands. */
+  private lastEval: EngineEvalData | null = null;
 
   reset(): void {
     if (this.worker) {
@@ -64,6 +126,8 @@ class StockfishEngine {
     this.onEvaluation = null;
     this.initPromise = null;
     this.searchId = 0;
+    this.goCount = 0;
+    this.bestmoveCount = 0;
   }
 
   async init(): Promise<boolean> {
@@ -71,26 +135,19 @@ class StockfishEngine {
     if (this.initPromise) return this.initPromise;
 
     this.isReady = false;
-    const preferSF18 = hasSharedArrayBuffer();
-
-    this.initPromise = this.tryInitEngine(preferSF18 ? "sf18" : "sf17")
-      .then((success) => {
-        if (success) return true;
-        if (preferSF18) {
-          console.log("Stockfish 18 failed, falling back to Stockfish 17.1");
-          return this.tryInitEngine("sf17");
-        }
-        return false;
-      })
-      .then((success) => {
-        if (!success) this.initPromise = null;
-        return success;
-      });
+    this.initPromise = (async () => {
+      for (const build of engineCandidates().filter((candidate) => !this.failedBuilds.has(candidate.scriptPath))) {
+        if (await this.tryInitEngine(build)) return true;
+        console.log(`${build.label} failed to start, trying the next build`);
+      }
+      this.initPromise = null;
+      return false;
+    })();
 
     return this.initPromise;
   }
 
-  private tryInitEngine(version: EngineVersion): Promise<boolean> {
+  private tryInitEngine(build: EngineBuild): Promise<boolean> {
     return new Promise((resolve) => {
       try {
         if (this.worker) {
@@ -103,17 +160,15 @@ class StockfishEngine {
           this.isReady = false;
         }
 
-        const isModule = version === "sf18";
-        const scriptPath =
-          version === "sf18" ? "/engines/stockfish-18-worker.js" : "/engines/stockfish-17-lite-single.js";
-
-        this.worker = isModule
-          ? new Worker(scriptPath, { type: "module" })
-          : new Worker(scriptPath);
+        this.worker = build.module
+          ? new Worker(build.scriptPath, { type: "module" })
+          : new Worker(build.scriptPath);
         const worker = this.worker;
+        this.goCount = 0;
+        this.bestmoveCount = 0;
 
         const timeout = setTimeout(() => {
-          console.error(`Stockfish ${version} init timeout`);
+          console.error(`${build.label} init timeout`);
           try {
             worker.terminate();
           } catch {
@@ -141,18 +196,46 @@ class StockfishEngine {
               clearTimeout(timeout);
               this.isReady = true;
               try {
-                worker.postMessage("setoption name Threads value 1");
-                worker.postMessage("setoption name Hash value 4");
+                worker.postMessage(`setoption name Threads value ${build.threads}`);
+                worker.postMessage(`setoption name Hash value ${build.threads > 1 ? 32 : 16}`);
               } catch {
                 /* ignore */
               }
-              console.log(`Stockfish ${version === "sf18" ? "18" : "17.1"} initialized`);
+              this.activeBuild = build;
+              console.log(`${build.label} initialized`);
               resolve(true);
             }
             return;
           }
 
-          if (text.startsWith("info ") && this.onEvaluation) {
+          if (text.startsWith("bestmove")) {
+            this.bestmoveCount += 1;
+            if (this.bestmoveCount >= this.goCount) {
+              this.isSearching = false;
+              // A search that ends short of MAX_DEPTH (mate on the board, a
+              // forced line) is still finished — report it now rather than
+              // leaving the caller to time out.
+              const last = this.lastEval;
+              this.lastEval = null;
+              if (last && !last.isFinal && this.onEvaluation) {
+                try {
+                  this.onEvaluation({ ...last, isFinal: true });
+                } catch (err) {
+                  console.error("Evaluation callback error:", err);
+                }
+              }
+            }
+            return;
+          }
+
+          // Bound lines are aspiration-window guesses, not scores.
+          const isCurrentSearch = this.bestmoveCount + 1 === this.goCount;
+          if (
+            text.startsWith("info ") &&
+            this.onEvaluation &&
+            isCurrentSearch &&
+            !/\b(lowerbound|upperbound)\b/.test(text)
+          ) {
             const depthMatch = text.match(/\bdepth\s+(\d+)/);
             const scoreMateMatch = text.match(/\bscore\s+mate\s+(-?\d+)/);
             const scoreCpMatch = text.match(/\bscore\s+cp\s+(-?\d+)/);
@@ -173,22 +256,26 @@ class StockfishEngine {
                 evaluation = (isBlackToMove ? -cp : cp) / 100;
               }
 
+              this.lastEval = { evaluation, depth, mateIn, isFinal: depth >= MAX_DEPTH };
               try {
-                this.onEvaluation({ evaluation, depth, mateIn, isFinal: depth >= MAX_DEPTH });
+                this.onEvaluation(this.lastEval);
               } catch (err) {
                 console.error("Evaluation callback error:", err);
               }
             }
           }
-
-          if (text.startsWith("bestmove ")) {
-            this.isSearching = false;
-          }
         };
 
         worker.onerror = (e) => {
-          console.error(`Stockfish ${version} worker error:`, e);
+          console.error(`${build.label} worker error:`, e);
           clearTimeout(timeout);
+          // A build that started and then died (a WASM trap, a pthread killed
+          // under memory pressure) is not retried: the next init skips to the
+          // next build in the chain.
+          if (this.activeBuild === build) {
+            this.failedBuilds.add(build.scriptPath);
+            this.activeBuild = null;
+          }
           this.isReady = false;
           this.isSearching = false;
           this.initPromise = null;
@@ -203,7 +290,7 @@ class StockfishEngine {
 
         worker.postMessage("uci");
       } catch (error) {
-        console.error(`Failed to create stockfish ${version} worker:`, error);
+        console.error(`Failed to create ${build.label} worker:`, error);
         this.initPromise = null;
         resolve(false);
       }
@@ -249,6 +336,8 @@ class StockfishEngine {
       this.isSearching = true;
       this.worker!.postMessage(`position fen ${fen}`);
       this.worker!.postMessage(`go depth ${MAX_DEPTH}`);
+      this.goCount += 1;
+      this.lastEval = null;
     } catch (err) {
       console.error("Failed to start search:", err);
       this.isSearching = false;
