@@ -12,7 +12,7 @@ describe("decodeShareState", () => {
     expect(state!.roundId).toBe("xqlJFydK");
     expect(state!.customizations.containerBackground).toBe("#000000");
     expect(state!.customizations.blackBarColor).toBe("#E79D29");
-    expect(state!.customizations.whitePlayerBackground).toBe("Transparent");
+    expect(state!.customizations.blackPlayerNameColor).toBe("#E79D29");
     expect(state!.customizations.turnArrowColor).toBe("#FFA500");
     expect(state!.customizations.barWidth).toBe(DEFAULT_CUSTOMIZATIONS.barWidth);
     expect(state!.customizations.showClocks).toBe(true);

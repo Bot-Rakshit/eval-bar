@@ -1,10 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TrackedGame } from "../types";
 import { formatPlayerName } from "../lib/playerName";
 import "./OlympiadCard.css";
 
 /**
- * A board card for the Olympiad overlay.
+ * A board card — the Olympiad overlay's, and the general broadcast view's.
+ * Neutral colours by default; `className="is-olympiad"` gives the Olympiad
+ * navy and gold, and `style` can override any colour token (lib/cardTheme.ts).
  *
  * The move number sits in a notch cut down into the card's top edge — inside
  * the card's box, never poking out of it — filled in its own colour and left
@@ -316,6 +318,16 @@ export interface OlympiadCardProps {
   team?: string;
   /** Design mode: render clocks exactly as given instead of ticking them. */
   freezeClocks?: boolean;
+  /** Extra classes on the card root, e.g. "is-olympiad" for that palette. */
+  className?: string;
+  /** Colour-token overrides (CSS custom properties). */
+  style?: CSSProperties;
+  /** Defaults to true. */
+  showClocks?: boolean;
+  /** Defaults to true. The notch stays; only the number goes. */
+  showMoveNumber?: boolean;
+  /** Flash the outline when the engine flags a blunder. Off by default. */
+  showAlert?: boolean;
 }
 
 function isTeam(candidate: string, team: string | undefined): boolean {
@@ -323,7 +335,17 @@ function isTeam(candidate: string, team: string | undefined): boolean {
   return candidate.trim().toLowerCase() === team.trim().toLowerCase();
 }
 
-export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardProps) {
+export function OlympiadCard({
+  game,
+  board,
+  team,
+  freezeClocks,
+  className,
+  style,
+  showClocks = true,
+  showMoveNumber = true,
+  showAlert = false,
+}: OlympiadCardProps) {
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const turn = game?.turn ?? "";
@@ -342,14 +364,19 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
 
   // The names sit either side of the notch and are clipped to fit.
   const gutter = <span className="oly-notch-gutter" style={{ width: NAME_GUTTER }} />;
+  const rootClass = (...modifiers: Array<string | false | undefined>) =>
+    ["oly-card", ...modifiers, className].filter(Boolean).join(" ");
+  const cardStyle: CSSProperties = { width: CARD_W, height: CARD_H, ...style };
 
   if (!game) {
     return (
-      <div className="oly-card is-empty" style={{ width: CARD_W, height: CARD_H }}>
+      <div className={rootClass("is-empty")} style={cardStyle}>
         <Frame />
-        <span className="oly-move" style={{ height: NOTCH_DEPTH }}>
-          {board}
-        </span>
+        {showMoveNumber && (
+          <span className="oly-move" style={{ height: NOTCH_DEPTH }}>
+            {board}
+          </span>
+        )}
         <div className="oly-body">
           <div className="oly-names">
             <span className="oly-name is-team">{team ?? ""}</span>
@@ -359,10 +386,12 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
           <div className="oly-bar">
             <div className="oly-bar-white" style={{ transform: "scaleX(0.5)" }} />
           </div>
-          <div className="oly-clocks">
-            <MonoTime text="1:30:00" className="is-muted" />
-            <MonoTime text="1:30:00" className="is-muted" />
-          </div>
+          {showClocks && (
+            <div className="oly-clocks">
+              <MonoTime text="1:30:00" className="is-muted" />
+              <MonoTime text="1:30:00" className="is-muted" />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -382,21 +411,23 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
   const clockText = (value: number) => (clocksUnknown ? "–:––:––" : formatClock(Math.max(0, value)));
 
   return (
-    <div className="oly-card" style={{ width: CARD_W, height: CARD_H }}>
+    <div className={rootClass(showAlert && game.alert && !result && "is-alert")} style={cardStyle}>
       <Frame />
-      <span className="oly-move" style={{ height: NOTCH_DEPTH }}>
-        {game.moveNumber}
-      </span>
+      {showMoveNumber && (
+        <span className="oly-move" style={{ height: NOTCH_DEPTH }}>
+          {game.moveNumber}
+        </span>
+      )}
       <div className="oly-body">
         <div className="oly-names">
           <PlayerName
             name={formatPlayerName(game.whitePlayer, true)}
-            className={whiteIsTeam ? "oly-name is-team" : "oly-name"}
+            className={whiteIsTeam ? "oly-name side-white is-team" : "oly-name side-white"}
           />
           {gutter}
           <PlayerName
             name={formatPlayerName(game.blackPlayer, true)}
-            className={blackIsTeam ? "oly-name is-team" : "oly-name"}
+            className={blackIsTeam ? "oly-name side-black is-team" : "oly-name side-black"}
           />
         </div>
 
@@ -422,16 +453,18 @@ export function OlympiadCard({ game, board, team, freezeClocks }: OlympiadCardPr
               </span>
             </div>
 
-            <div className="oly-clocks">
-              <MonoTime
-                text={clockText(liveWhite)}
-                className={`${whiteIsTeam ? "is-team" : ""} ${!clocksUnknown && liveWhite <= 30 ? "is-low" : ""}`}
-              />
-              <MonoTime
-                text={clockText(liveBlack)}
-                className={`${blackIsTeam ? "is-team" : ""} ${!clocksUnknown && liveBlack <= 30 ? "is-low" : ""}`}
-              />
-            </div>
+            {showClocks && (
+              <div className="oly-clocks">
+                <MonoTime
+                  text={clockText(liveWhite)}
+                  className={`side-white ${whiteIsTeam ? "is-team" : ""} ${!clocksUnknown && liveWhite <= 30 ? "is-low" : ""}`}
+                />
+                <MonoTime
+                  text={clockText(liveBlack)}
+                  className={`side-black ${blackIsTeam ? "is-team" : ""} ${!clocksUnknown && liveBlack <= 30 ? "is-low" : ""}`}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

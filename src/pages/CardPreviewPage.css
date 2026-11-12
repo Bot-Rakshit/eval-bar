@@ -1,0 +1,84 @@
+.card-preview {
+  min-height: 100vh;
+  background: #0b0b0d;
+  color: #f2f2f3;
+  font-family: "Outfit", var(--app-font);
+}
+
+.card-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  padding: 18px 24px;
+}
+
+.card-preview-head h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card-preview-band {
+  position: relative;
+  padding: 34px 24px 20px;
+  background-position: center;
+  background-size: cover;
+}
+
+.card-preview-band-label {
+  position: absolute;
+  top: 10px;
+  left: 24px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+}
+
+.card-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.card-preview-item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-preview-item figcaption {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 6px;
+  align-self: flex-start;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+}
+
+.bg-chroma {
+  background-color: rgb(21, 185, 81);
+}
+
+.bg-black {
+  background-color: #000000;
+}
+
+.bg-white {
+  background-color: #ffffff;
+}
+
+.bg-grey {
+  background-color: #6e7075;
+}
+
+.bg-photo {
+  background-color: #03203a;
+}

@@ -1,30 +1,38 @@
 /* Olympiad board card — every colour and size is a token, tune them here. */
 
 .oly-card {
-  --card-fill: #071a30;
-  --notch-fill: #182e46;
-  --card-stroke: #ebc463;
+  /* Neutral by default — the general broadcast view. A graphite card with a
+     silver edge reads on chroma green, on black and on a light feed alike.
+     The Olympiad overlay swaps in its own palette below (.is-olympiad), and
+     the broadcast view overrides these from the operator's picks
+     (lib/cardTheme.ts). */
+  --card-fill: #17181b;
+  --notch-fill: #27292c;
+  --card-stroke: #8a8f98;
   /* The card stroke, dialled back — closes the top of the notch without
      framing the number as hard as the rest of the edge. */
-  --notch-stroke: rgba(235, 196, 99, 0.3);
+  --notch-stroke: rgba(138, 143, 152, 0.3);
 
-  --name: #ffffff;
-  --name-team: #e4c372;
-  --name-muted: rgba(243, 234, 208, 0.55);
+  --name: #f2f2f3;
+  --name-team: #f0c35a;
+  --name-muted: rgba(242, 242, 243, 0.5);
 
-  --move: #f9f1da;
+  --move: #e4e5e8;
 
-  /* Eval bar — Chessiro's game-review bar, recoloured for this card */
-  --bar-white: #f9f1da;
-  --bar-black: #2c2717;
+  /* Eval bar — the dark side sits above the card fill so the split shows */
+  --bar-white: #f2f2f3;
+  --bar-black: #3a3c41;
   /* Same line as the notch, so the two quiet edges stay together */
   --bar-stroke: var(--notch-stroke);
-  --eval-on-white: #000000;
-  --eval-on-black: #f9f1da;
+  --eval-on-white: #111214;
+  --eval-on-black: #f4f4f5;
 
-  --clock: #ffffff;
-  --clock-team: #e4c372;
-  --clock-low: #ff6b6b;
+  --clock: #f2f2f3;
+  --clock-team: #f0c35a;
+  --clock-low: #ff5f57;
+
+  /* Flashes the outline when the engine flags a blunder */
+  --alert: #ff3b30;
 
   --name-size: 18px;
   --name-weight: 500;
@@ -45,6 +53,29 @@
   position: relative;
   flex-shrink: 0;
   box-sizing: border-box;
+}
+
+/* The Olympiad overlay's navy and gold, matched to the Olympiad backdrop */
+.oly-card.is-olympiad {
+  --card-fill: #071a30;
+  --notch-fill: #182e46;
+  --card-stroke: #ebc463;
+  --notch-stroke: rgba(235, 196, 99, 0.3);
+
+  --name: #ffffff;
+  --name-team: #e4c372;
+  --name-muted: rgba(243, 234, 208, 0.55);
+
+  --move: #f9f1da;
+
+  --bar-white: #f9f1da;
+  --bar-black: #2c2717;
+  --eval-on-white: #000000;
+  --eval-on-black: #f9f1da;
+
+  --clock: #ffffff;
+  --clock-team: #e4c372;
+  --clock-low: #ff6b6b;
 }
 
 /* Card fill, notch fill, then both strokes over the top */
@@ -139,6 +170,15 @@
 
 .oly-name:last-child {
   text-align: right;
+}
+
+/* Per-side colours; both fall back to --name */
+.oly-name.side-white {
+  color: var(--name-white, var(--name));
+}
+
+.oly-name.side-black {
+  color: var(--name-black, var(--name));
 }
 
 .oly-name.is-team {
@@ -253,6 +293,14 @@
   text-align: center;
 }
 
+.oly-mono.side-white {
+  color: var(--clock-white, var(--clock));
+}
+
+.oly-mono.side-black {
+  color: var(--clock-black, var(--clock));
+}
+
 .oly-mono.is-team {
   color: var(--clock-team);
 }
@@ -263,6 +311,23 @@
 
 .oly-mono.is-muted {
   color: var(--name-muted);
+}
+
+/* ---------- Alert ---------- */
+
+.oly-card.is-alert .oly-stroke {
+  animation: oly-alert 1s ease-in-out infinite;
+}
+
+@keyframes oly-alert {
+  0%,
+  100% {
+    stroke: var(--alert);
+    stroke-width: 3px;
+  }
+  50% {
+    stroke: var(--card-stroke);
+  }
 }
 
 /* ---------- Placeholder ---------- */
@@ -286,4 +351,17 @@
 .oly-grid {
   display: flex;
   align-items: flex-end;
+}
+
+/* ---------- Broadcast view ---------- */
+
+/* A slot sized by the operator (a share of the row); the card inside is
+   zoomed to fill it, so it keeps the Olympiad proportions at any size. */
+.board-card-slot {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.board-card-slot > .board-card-zoom {
+  width: max-content;
 }

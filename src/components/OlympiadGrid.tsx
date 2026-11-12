@@ -27,6 +27,7 @@ export function OlympiadGrid({ games, team, freezeClocks }: OlympiadGridProps) {
           board={index + 1}
           team={team}
           freezeClocks={freezeClocks}
+          className="is-olympiad"
         />
       ))}
     </div>

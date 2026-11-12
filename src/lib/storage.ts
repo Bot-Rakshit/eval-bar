@@ -1,6 +1,8 @@
 import { BarCustomizations, mergeCustomizations } from "../types";
 
-const STORAGE_KEY = "evalbar.customizations.v2";
+// v3: the board-card design with the neutral palette. Saved v2 picks were
+// the old bar's colours, so they are left behind rather than carried over.
+const STORAGE_KEY = "evalbar.customizations.v3";
 
 export function loadStoredCustomizations(): BarCustomizations {
   try {

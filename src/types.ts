@@ -1,3 +1,5 @@
+import { NEUTRAL_COLORS } from "./lib/cardTheme";
+
 export type GameResult = "1-0" | "0-1" | "1/2-1/2" | null;
 
 export type SideToMove = "white" | "black" | "";
@@ -47,19 +49,23 @@ export interface TournamentSummary {
   rounds: RoundInfo[];
 }
 
+/**
+ * The broadcast view's settings. The colour keys keep their original names so
+ * old links still carry their colours, but they now drive the board card:
+ * containerBackground = card fill, containerBorderColor = card outline,
+ * turnArrowColor = the move number in the notch.
+ */
 export interface BarCustomizations {
   containerBackground: string;
   containerBorderColor: string;
   whiteBarColor: string;
   blackBarColor: string;
-  whitePlayerBackground: string;
-  blackPlayerBackground: string;
   whitePlayerNameColor: string;
   blackPlayerNameColor: string;
   turnArrowColor: string;
+  /** Width of each card, as a percentage of the row. */
   barWidth: number;
   barGap: number;
-  barHeight: number;
   showClocks: boolean;
   showMoveNumber: boolean;
   sortByEval: boolean;
@@ -69,18 +75,9 @@ export interface BarCustomizations {
 }
 
 export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
-  containerBackground: "#000000",
-  containerBorderColor: "#FFFFFF",
-  whiteBarColor: "#ffffff",
-  blackBarColor: "#E79D29",
-  whitePlayerBackground: "Transparent",
-  blackPlayerBackground: "Transparent",
-  whitePlayerNameColor: "#FFFFFF",
-  blackPlayerNameColor: "#E79D29",
-  turnArrowColor: "#FFA500",
+  ...NEUTRAL_COLORS,
   barWidth: 13,
-  barGap: 4,
-  barHeight: 24,
+  barGap: 8,
   showClocks: true,
   showMoveNumber: true,
   sortByEval: false,

@@ -4,8 +4,6 @@ import { BarCustomizations, mergeCustomizations, ShareState } from "../types";
 const LEGACY_KEY_MAP: Record<string, keyof BarCustomizations> = {
   evalContainerBg: "containerBackground",
   evalContainerBorderColor: "containerBorderColor",
-  whitePlayerColor: "whitePlayerBackground",
-  blackPlayerColor: "blackPlayerBackground",
   moveIndicatorArrowColor: "turnArrowColor",
 };
 

@@ -3,6 +3,7 @@ import { MuiColorInput } from "mui-color-input";
 import Slider from "@mui/material/Slider";
 import Switch from "@mui/material/Switch";
 import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, mergeCustomizations } from "../types";
+import { THEME_PRESETS } from "../lib/cardTheme";
 
 interface CustomizePanelProps {
   customizations: BarCustomizations;
@@ -16,87 +17,26 @@ interface ColorFieldDef {
 
 const COLOR_SECTIONS: Array<{ title: string; fields: ColorFieldDef[] }> = [
   {
+    title: "Card",
+    fields: [
+      { key: "containerBackground", label: "Card" },
+      { key: "containerBorderColor", label: "Outline" },
+      { key: "turnArrowColor", label: "Move number" },
+    ],
+  },
+  {
     title: "Eval bar",
     fields: [
-      { key: "whiteBarColor", label: "White bar" },
-      { key: "blackBarColor", label: "Black bar" },
+      { key: "whiteBarColor", label: "White side" },
+      { key: "blackBarColor", label: "Black side" },
     ],
   },
   {
     title: "Players",
     fields: [
-      { key: "whitePlayerNameColor", label: "White name" },
-      { key: "blackPlayerNameColor", label: "Black name" },
-      { key: "whitePlayerBackground", label: "White name background" },
-      { key: "blackPlayerBackground", label: "Black name background" },
+      { key: "whitePlayerNameColor", label: "White name and clock" },
+      { key: "blackPlayerNameColor", label: "Black name and clock" },
     ],
-  },
-  {
-    title: "Container",
-    fields: [
-      { key: "containerBackground", label: "Background" },
-      { key: "containerBorderColor", label: "Border" },
-      { key: "turnArrowColor", label: "Turn arrow" },
-    ],
-  },
-];
-
-const THEME_PRESETS: Array<{ name: string; colors: Partial<BarCustomizations> }> = [
-  {
-    name: "CBI",
-    colors: {
-      containerBackground: "#000000",
-      containerBorderColor: "#FFFFFF",
-      whiteBarColor: "#ffffff",
-      blackBarColor: "#E79D29",
-      whitePlayerBackground: "Transparent",
-      blackPlayerBackground: "Transparent",
-      whitePlayerNameColor: "#FFFFFF",
-      blackPlayerNameColor: "#E79D29",
-      turnArrowColor: "#FFA500",
-    },
-  },
-  {
-    name: "Lichess",
-    colors: {
-      containerBackground: "#262421",
-      containerBorderColor: "#3c3834",
-      whiteBarColor: "#ffffff",
-      blackBarColor: "#4d4d4d",
-      whitePlayerBackground: "Transparent",
-      blackPlayerBackground: "Transparent",
-      whitePlayerNameColor: "#ffffff",
-      blackPlayerNameColor: "#bfbfbf",
-      turnArrowColor: "#7fa650",
-    },
-  },
-  {
-    name: "Chess.com",
-    colors: {
-      containerBackground: "#312e2b",
-      containerBorderColor: "#403d39",
-      whiteBarColor: "#f9f9f9",
-      blackBarColor: "#564f4a",
-      whitePlayerBackground: "Transparent",
-      blackPlayerBackground: "Transparent",
-      whitePlayerNameColor: "#ffffff",
-      blackPlayerNameColor: "#c9c7c5",
-      turnArrowColor: "#81b64c",
-    },
-  },
-  {
-    name: "Midnight",
-    colors: {
-      containerBackground: "#0d1117",
-      containerBorderColor: "#30363d",
-      whiteBarColor: "#58a6ff",
-      blackBarColor: "#161b22",
-      whitePlayerBackground: "Transparent",
-      blackPlayerBackground: "Transparent",
-      whitePlayerNameColor: "#e6edf3",
-      blackPlayerNameColor: "#79c0ff",
-      turnArrowColor: "#d29922",
-    },
   },
 ];
 
@@ -210,7 +150,7 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
             </div>
             <div className="customize-grid">
               <div className="customize-field">
-                <span className="customize-field-label">Bar width — {customizations.barWidth}%</span>
+                <span className="customize-field-label">Card width — {customizations.barWidth}%</span>
                 <Slider
                   size="small"
                   min={8}
@@ -221,7 +161,7 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
                 />
               </div>
               <div className="customize-field">
-                <span className="customize-field-label">Bar gap — {customizations.barGap}px</span>
+                <span className="customize-field-label">Gap — {customizations.barGap}px</span>
                 <Slider
                   size="small"
                   min={0}
@@ -229,17 +169,6 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
                   step={1}
                   value={customizations.barGap}
                   onChange={(_, value) => patch({ barGap: value as number })}
-                />
-              </div>
-              <div className="customize-field">
-                <span className="customize-field-label">Bar height — {customizations.barHeight}px</span>
-                <Slider
-                  size="small"
-                  min={12}
-                  max={36}
-                  step={1}
-                  value={customizations.barHeight}
-                  onChange={(_, value) => patch({ barHeight: value as number })}
                 />
               </div>
               <div className="customize-field customize-toggle">
