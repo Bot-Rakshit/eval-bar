@@ -255,7 +255,7 @@
   font-size: 26px;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--eval-on-black);
+  color: var(--result, var(--eval-on-black));
   font-variant-numeric: tabular-nums;
 }
 
@@ -311,6 +311,56 @@
 
 .oly-mono.is-muted {
   color: var(--name-muted);
+}
+
+/* ---------- Frame styles (lib/cardTheme.ts CARD_FRAMES) ---------- */
+
+/* No outline: the card reads as one solid shape */
+.oly-card.frame-solid .oly-stroke,
+.oly-card.frame-solid .oly-notch-stroke {
+  stroke: transparent;
+}
+
+.oly-card.frame-solid .oly-notch-fill {
+  fill: var(--notch-fill);
+}
+
+/* The notch painted in the outline colour, so the move number is a tab */
+.oly-card.frame-filled .oly-notch-fill {
+  fill: var(--card-stroke);
+}
+
+.oly-card.frame-filled .oly-notch-stroke {
+  stroke: transparent;
+}
+
+.oly-card.frame-filled .oly-move {
+  color: var(--stroke-ink, var(--card-fill));
+  font-weight: 700;
+}
+
+/* See-through card; only for OBS alpha (?bg=transparent), never a key */
+.oly-card.frame-glass .oly-card-fill {
+  fill-opacity: 0.62;
+}
+
+.oly-card.frame-glass .oly-notch-fill {
+  fill-opacity: 0.5;
+}
+
+/* ---------- Bar shapes (lib/cardTheme.ts BAR_SHAPES) ---------- */
+
+.oly-card.bar-square .oly-bar {
+  border-radius: 3px;
+}
+
+.oly-card.bar-slim .oly-bar {
+  height: 15px;
+  margin: 3px 0;
+}
+
+.oly-card.bar-slim .oly-eval {
+  font-size: 11px;
 }
 
 /* ---------- Alert ---------- */

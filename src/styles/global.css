@@ -31,6 +31,12 @@ body.chroma-view {
   background-color: rgb(21, 185, 81);
 }
 
+/* OBS browser source with alpha: nothing behind the cards at all */
+html.transparent-view,
+body.transparent-view {
+  background: transparent;
+}
+
 /* Team overlay: transparent for OBS, optional backdrop for previewing (?bg=1) */
 body.team-view {
   background-color: transparent;
@@ -488,6 +494,177 @@ body.team-view-backdrop .oly-card {
   align-items: center;
   justify-content: space-between;
   padding: 4px 0;
+}
+
+/* Visual pickers: each tile is a live card, shrunk */
+.look-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+}
+
+.look-tile {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 160ms var(--ease-out), background-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.look-tile:active {
+  transform: scale(0.98);
+}
+
+.look-tile.selected {
+  border-color: var(--accent);
+  background: rgba(231, 157, 41, 0.1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .look-tile:not(.selected):hover {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+}
+
+.look-tile-card {
+  display: block;
+  zoom: 0.6;
+  pointer-events: none;
+}
+
+.look-tile-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.look-tile-hint {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+.customize-details > summary {
+  display: list-item;
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.customize-details[open] > summary {
+  margin-bottom: 12px;
+}
+
+.customize-subsection + .customize-subsection {
+  margin-top: 10px;
+}
+
+.customize-subsection > .customize-field-label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.customize-content > .action-btn {
+  margin-top: 16px;
+}
+
+/* ---------- OBS setup ---------- */
+
+.obs-panel {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.obs-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: obs-step;
+}
+
+.obs-step {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 4px 12px;
+  align-items: start;
+  counter-increment: obs-step;
+}
+
+.obs-step::before {
+  content: counter(obs-step);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  color: #161616;
+  background: var(--accent);
+}
+
+.obs-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.obs-step-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.obs-step-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.obs-step-text code {
+  font-size: 12px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.obs-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.obs-link-input {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  text-overflow: ellipsis;
+}
+
+.obs-warning {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-strong);
 }
 
 /* ---------- Eval bars layout ---------- */

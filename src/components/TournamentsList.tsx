@@ -195,6 +195,28 @@ function extractRoundIdFromUrl(url: string): string {
   return parts[parts.length - 1] ?? "";
 }
 
+/** The long tail stays folded so the look settings below stay within reach. */
+const OTHERS_SHOWN = 8;
+
+const ShowMoreButton = styled.button`
+  margin: 0.5rem 0 0;
+  padding: 9px 18px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: ${TEXT};
+  background: ${PANEL_BG};
+  border: 1px solid ${PANEL_BORDER};
+  border-radius: 10px;
+  cursor: pointer;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: ${ACCENT};
+    }
+  }
+`;
+
 const SectionTitle = styled.h3`
   align-self: flex-start;
   margin: 1.25rem 0 0.25rem;
@@ -237,6 +259,7 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
   const [customUrl, setCustomUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showAllOthers, setShowAllOthers] = useState(false);
 
   useEffect(() => {
     fetchLiveTournaments()
@@ -325,7 +348,12 @@ export function TournamentsList({ onSelect }: TournamentsListProps) {
       {recommended.length > 0 && <SectionTitle>Recommended</SectionTitle>}
       {recommended.map(renderCard)}
       {others.length > 0 && recommended.length > 0 && <SectionTitle>All broadcasts</SectionTitle>}
-      {others.map(renderCard)}
+      {(showAllOthers || query ? others : others.slice(0, OTHERS_SHOWN)).map(renderCard)}
+      {!showAllOthers && !query && others.length > OTHERS_SHOWN && (
+        <ShowMoreButton type="button" onClick={() => setShowAllOthers(true)}>
+          Show all {others.length} broadcasts
+        </ShowMoreButton>
+      )}
     </TournamentsWrapper>
   );
 }

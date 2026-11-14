@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
@@ -13,6 +12,7 @@ import { getStockfishEngine } from "../lib/stockfishEngine";
 import { fetchTournamentRounds } from "../api/lichess";
 import TournamentsList, { TournamentSelection } from "../components/TournamentsList";
 import CustomizePanel from "../components/CustomizePanel";
+import ObsSetup from "../components/ObsSetup";
 import EvalBarGrid from "../components/EvalBarGrid";
 
 const theme = createTheme({
@@ -55,9 +55,7 @@ export default function ControlPage() {
   const [manualKeys, setManualKeys] = useState<string[]>([]);
   const [chipSelection, setChipSelection] = useState<string[]>([]);
   const [showExample, setShowExample] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [customizations, setCustomizations] = useState<BarCustomizations>(loadStoredCustomizations);
-  const navigate = useNavigate();
 
   useEffect(() => {
     void getStockfishEngine().init();
@@ -185,7 +183,13 @@ export default function ControlPage() {
     return [];
   }, [selectionMode, followedPlayers, manualKeys]);
 
-  const broadcastPath = tournament
+  // Nothing to put on air yet: hand-picked mode with no games, or follow mode
+  // with nobody followed (an empty list would otherwise show every board).
+  const nothingPicked =
+    (selectionMode === "games" && manualKeys.length === 0) ||
+    (selectionMode === "player" && followedPlayers.length === 0);
+
+  const broadcastPath = tournament && !nothingPicked
     ? `/broadcast/${encodeShareState({
         version: 2,
         tournamentId: tournament.tournamentId,
@@ -195,20 +199,12 @@ export default function ControlPage() {
       })}`
     : null;
 
-  const copyBroadcastLink = () => {
-    if (!broadcastPath) return;
-    navigator.clipboard
-      .writeText(`${window.location.origin}${broadcastPath}`)
-      .then(() => {
-        setLinkCopied(true);
-        setTimeout(() => setLinkCopied(false), 2500);
-      })
-      .catch(() => alert("Could not copy — copy the URL from the browser after opening the view."));
-  };
-
-  const openBroadcastView = () => {
-    if (broadcastPath) navigate(broadcastPath);
-  };
+  const followHint =
+    selectionMode === "all"
+      ? "It shows every board and moves to the next round on its own."
+      : selectionMode === "player"
+      ? "It follows these players into every new round."
+      : "It follows the players from the picked games into new rounds."
 
   const availableGameKeys = Array.from(snapshots.keys());
   const streamStatusLabel =
@@ -353,17 +349,18 @@ export default function ControlPage() {
                   Add Selected Games
                 </button>
               )}
-              <button type="button" className="action-btn primary" onClick={copyBroadcastLink}>
-                {linkCopied ? "Copied!" : "Copy Broadcast Link"}
-              </button>
-              <button type="button" className="action-btn" onClick={openBroadcastView}>
-                Open Broadcast View
-              </button>
               <button type="button" className="action-btn" onClick={triggerDemoBlunder}>
                 Demo Blunder
               </button>
               <CustomizePanel customizations={customizations} onChange={setCustomizations} />
             </div>
+
+            <ObsSetup
+              broadcastPath={broadcastPath}
+              customizations={customizations}
+              onChange={setCustomizations}
+              followHint={followHint}
+            />
           </div>
         )}
 

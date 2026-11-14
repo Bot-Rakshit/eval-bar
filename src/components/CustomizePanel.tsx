@@ -1,13 +1,25 @@
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, ReactNode, useMemo, useRef, useState } from "react";
 import { MuiColorInput } from "mui-color-input";
 import Slider from "@mui/material/Slider";
 import Switch from "@mui/material/Switch";
-import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, mergeCustomizations } from "../types";
-import { THEME_PRESETS } from "../lib/cardTheme";
+import { BarCustomizations, DEFAULT_CUSTOMIZATIONS, emptyTrackedGame, mergeCustomizations, TrackedGame } from "../types";
+import {
+  BAR_LABELS,
+  BAR_SHAPES,
+  CARD_FRAMES,
+  cardStyleClass,
+  cardThemeVars,
+  FRAME_LABELS,
+  matchesPreset,
+  THEME_PRESETS,
+} from "../lib/cardTheme";
+import OlympiadCard from "./OlympiadCard";
 
 interface CustomizePanelProps {
   customizations: BarCustomizations;
   onChange: (next: BarCustomizations) => void;
+  /** Start with the panel open. */
+  defaultOpen?: boolean;
 }
 
 interface ColorFieldDef {
@@ -20,7 +32,7 @@ const COLOR_SECTIONS: Array<{ title: string; fields: ColorFieldDef[] }> = [
     title: "Card",
     fields: [
       { key: "containerBackground", label: "Card" },
-      { key: "containerBorderColor", label: "Outline" },
+      { key: "containerBorderColor", label: "Outline and tab" },
       { key: "turnArrowColor", label: "Move number" },
     ],
   },
@@ -40,13 +52,65 @@ const COLOR_SECTIONS: Array<{ title: string; fields: ColorFieldDef[] }> = [
   },
 ];
 
-export function CustomizePanel({ customizations, onChange }: CustomizePanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
+/** The board every tile shows: White a little better, mid-game. */
+const SAMPLE_GAME: TrackedGame = {
+  ...emptyTrackedGame("Gukesh D", "Caruana, Fabiano"),
+  evaluation: 1.4,
+  depth: 20,
+  moveNumber: 27,
+  whiteClock: 3125,
+  blackClock: 2871,
+  turn: "white",
+};
+
+/** A live card, shrunk to fit a picker tile. */
+function MiniCard({ className, style }: { className: string; style: CSSProperties }) {
+  return (
+    <span className="look-tile-card">
+      <OlympiadCard game={SAMPLE_GAME} board={1} className={className} style={style} freezeClocks />
+    </span>
+  );
+}
+
+function LookTile({
+  selected,
+  label,
+  hint,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={selected ? "look-tile selected" : "look-tile"}
+      aria-pressed={selected}
+      onClick={onClick}
+    >
+      {children}
+      <span className="look-tile-label">{label}</span>
+      {hint && <span className="look-tile-hint">{hint}</span>}
+    </button>
+  );
+}
+
+export function CustomizePanel({ customizations, onChange, defaultOpen = false }: CustomizePanelProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const patch = (partial: Partial<BarCustomizations>) => {
     onChange({ ...customizations, ...partial });
   };
+
+  const styleClass = cardStyleClass(customizations.cardFrame, customizations.barShape);
+  const currentVars = useMemo(() => cardThemeVars(customizations), [customizations]);
+  const presetVars = useMemo(() => THEME_PRESETS.map((preset) => cardThemeVars(preset.colors)), []);
+  const isCustomPalette = !THEME_PRESETS.some((preset) => matchesPreset(customizations, preset));
 
   const exportTheme = () => {
     const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(customizations, null, 2))}`;
@@ -77,7 +141,7 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
   return (
     <div className="customize-panel">
       <button type="button" className="action-btn" onClick={() => setIsOpen(!isOpen)}>
-        {isOpen ? "Hide Customization" : "Customize Bars"}
+        {isOpen ? "Hide look settings" : "Change look"}
       </button>
       <button type="button" className="action-btn" onClick={() => fileInputRef.current?.click()}>
         Import Theme
@@ -96,39 +160,61 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
       {isOpen && (
         <div className="customize-content">
           <div className="customize-section">
-            <span className="control-label">Theme presets</span>
-            <div className="preset-row">
-              {THEME_PRESETS.map((preset) => (
-                <button
+            <span className="control-label">
+              Theme{isCustomPalette ? " · custom colours" : ""}
+            </span>
+            <div className="look-grid">
+              {THEME_PRESETS.map((preset, index) => (
+                <LookTile
                   key={preset.name}
-                  type="button"
-                  className="action-btn"
+                  label={preset.name}
+                  hint={preset.note}
+                  selected={matchesPreset(customizations, preset)}
                   onClick={() => patch(preset.colors)}
                 >
-                  {preset.name}
-                </button>
+                  <MiniCard className={styleClass} style={presetVars[index]} />
+                </LookTile>
               ))}
             </div>
           </div>
 
-          {COLOR_SECTIONS.map((section) => (
-            <div className="customize-section" key={section.title}>
-              <span className="control-label">{section.title}</span>
-              <div className="customize-grid">
-                {section.fields.map((field) => (
-                  <div className="customize-field" key={field.key}>
-                    <span className="customize-field-label">{field.label}</span>
-                    <MuiColorInput
-                      size="small"
-                      format="hex"
-                      value={customizations[field.key] as string}
-                      onChange={(color) => patch({ [field.key]: color } as Partial<BarCustomizations>)}
-                    />
-                  </div>
-                ))}
-              </div>
+          <div className="customize-section">
+            <span className="control-label">Frame</span>
+            <div className="look-grid">
+              {CARD_FRAMES.map((frame) => (
+                <LookTile
+                  key={frame}
+                  label={FRAME_LABELS[frame]}
+                  hint={frame === "glass" ? "Needs the Transparent background in OBS" : undefined}
+                  selected={customizations.cardFrame === frame}
+                  onClick={() =>
+                    patch(
+                      // Glass only works composited with alpha, so pick that too
+                      frame === "glass" ? { cardFrame: frame, overlayBackground: "transparent" } : { cardFrame: frame }
+                    )
+                  }
+                >
+                  <MiniCard className={cardStyleClass(frame, customizations.barShape)} style={currentVars} />
+                </LookTile>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="customize-section">
+            <span className="control-label">Eval bar</span>
+            <div className="look-grid">
+              {BAR_SHAPES.map((shape) => (
+                <LookTile
+                  key={shape}
+                  label={BAR_LABELS[shape]}
+                  selected={customizations.barShape === shape}
+                  onClick={() => patch({ barShape: shape })}
+                >
+                  <MiniCard className={cardStyleClass(customizations.cardFrame, shape)} style={currentVars} />
+                </LookTile>
+              ))}
+            </div>
+          </div>
 
           <div className="customize-section">
             <span className="control-label">Layout</span>
@@ -213,6 +299,28 @@ export function CustomizePanel({ customizations, onChange }: CustomizePanelProps
               </div>
             </div>
           </div>
+
+          <details className="customize-section customize-details">
+            <summary className="control-label">Fine-tune colours</summary>
+            {COLOR_SECTIONS.map((section) => (
+              <div className="customize-subsection" key={section.title}>
+                <span className="customize-field-label">{section.title}</span>
+                <div className="customize-grid">
+                  {section.fields.map((field) => (
+                    <div className="customize-field" key={field.key}>
+                      <span className="customize-field-label">{field.label}</span>
+                      <MuiColorInput
+                        size="small"
+                        format="hex"
+                        value={customizations[field.key] as string}
+                        onChange={(color) => patch({ [field.key]: color } as Partial<BarCustomizations>)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </details>
 
           <button
             type="button"

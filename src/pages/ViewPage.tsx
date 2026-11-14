@@ -24,11 +24,18 @@ export default function ViewPage() {
     }
   }, [shareState, navigate]);
 
-  // Chroma-key background only on this final screen (used inside OBS)
+  // The final screen, used inside OBS: chroma green to key out, or
+  // transparent for an OBS browser source to composite with its alpha.
+  const overlayBackground = shareState?.customizations.overlayBackground ?? "chroma";
   useEffect(() => {
-    document.body.classList.add("chroma-view");
-    return () => document.body.classList.remove("chroma-view");
-  }, []);
+    const viewClass = overlayBackground === "transparent" ? "transparent-view" : "chroma-view";
+    document.documentElement.classList.add(viewClass);
+    document.body.classList.add(viewClass);
+    return () => {
+      document.documentElement.classList.remove(viewClass);
+      document.body.classList.remove(viewClass);
+    };
+  }, [overlayBackground]);
 
   // Resolve the round name for the on-overlay label
   useEffect(() => {

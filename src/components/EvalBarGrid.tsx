@@ -1,6 +1,6 @@
 import { ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BarCustomizations, TrackedGame } from "../types";
-import { cardThemeVars } from "../lib/cardTheme";
+import { cardStyleClass, cardThemeVars } from "../lib/cardTheme";
 import OlympiadCard, { CARD_W } from "./OlympiadCard";
 
 interface EvalBarGridProps {
@@ -71,6 +71,7 @@ export function EvalBarGrid({ games, customizations, team }: EvalBarGridProps) {
               game={game}
               board={game.board || index + 1}
               team={team}
+              className={cardStyleClass(customizations.cardFrame, customizations.barShape)}
               style={themeVars}
               showClocks={customizations.showClocks}
               showMoveNumber={customizations.showMoveNumber}

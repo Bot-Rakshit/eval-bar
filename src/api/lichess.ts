@@ -78,6 +78,7 @@ function toRoundInfo(round: ApiRound): RoundInfo {
  * set the overlay up before the round. Ordering is left to rankTournaments.
  */
 const UPCOMING_WINDOW_MS = 12 * 60 * 60 * 1000;
+const STALE_AFTER_MS = 60 * 60 * 1000;
 
 export async function fetchLiveTournaments(now = Date.now()): Promise<TournamentSummary[]> {
   const response = await fetch(`${API_BASE}/broadcast?nb=100`);
@@ -97,11 +98,14 @@ export async function fetchLiveTournaments(now = Date.now()): Promise<Tournament
     }
     if (!entry.tour || !entry.rounds || entry.rounds.length === 0) continue;
     const live = entry.rounds.some((round) => round.ongoing === true);
+    // A round scheduled more than STALE_AFTER_MS ago that never went live is
+    // a stale schedule, not one about to start.
     const startsSoon = entry.rounds.some(
       (round) =>
         !round.finished &&
         typeof round.startsAt === "number" &&
-        round.startsAt - now <= UPCOMING_WINDOW_MS
+        round.startsAt - now <= UPCOMING_WINDOW_MS &&
+        now - round.startsAt <= STALE_AFTER_MS
     );
     if (!live && !startsSoon) continue;
     tournaments.push({

@@ -1,4 +1,4 @@
-import { NEUTRAL_COLORS } from "./lib/cardTheme";
+import { BAR_SHAPES, BarShape, CARD_FRAMES, CardFrame, CRIMSON_COLORS } from "./lib/cardTheme";
 
 export type GameResult = "1-0" | "0-1" | "1/2-1/2" | null;
 
@@ -67,6 +67,15 @@ export interface BarCustomizations {
   whitePlayerNameColor: string;
   blackPlayerNameColor: string;
   turnArrowColor: string;
+  /** Card frame style (lib/cardTheme.ts CARD_FRAMES). */
+  cardFrame: CardFrame;
+  /** Eval bar shape (lib/cardTheme.ts BAR_SHAPES). */
+  barShape: BarShape;
+  /**
+   * What sits behind the cards on the broadcast view: chroma green to key out
+   * in OBS, or transparent for an OBS browser source to composite directly.
+   */
+  overlayBackground: OverlayBackground;
   /** Width of each card, as a percentage of the row. */
   barWidth: number;
   barGap: number;
@@ -78,8 +87,15 @@ export interface BarCustomizations {
   showRoundName: boolean;
 }
 
+export const OVERLAY_BACKGROUNDS = ["chroma", "transparent"] as const;
+export type OverlayBackground = (typeof OVERLAY_BACKGROUNDS)[number];
+
+/** Crimson with the filled notch, on chroma green. */
 export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
-  ...NEUTRAL_COLORS,
+  ...CRIMSON_COLORS,
+  cardFrame: "filled",
+  barShape: "pill",
+  overlayBackground: "chroma",
   barWidth: 13,
   barGap: 8,
   showClocks: true,
@@ -94,13 +110,21 @@ export const DEFAULT_CUSTOMIZATIONS: BarCustomizations = {
  * Merge unknown values into a full customizations object, keeping only
  * keys that exist in the defaults with a matching type.
  */
+const ENUM_VALUES: Partial<Record<keyof BarCustomizations, readonly string[]>> = {
+  cardFrame: CARD_FRAMES,
+  barShape: BAR_SHAPES,
+  overlayBackground: OVERLAY_BACKGROUNDS,
+  layoutDirection: ["row", "column"],
+};
+
 export function mergeCustomizations(partial: Record<string, unknown> | null | undefined): BarCustomizations {
   const merged = { ...DEFAULT_CUSTOMIZATIONS };
   for (const [key, value] of Object.entries(partial ?? {})) {
     const target = key as keyof BarCustomizations;
-    if (target in merged && typeof value === typeof merged[target]) {
-      (merged[target] as unknown) = value;
-    }
+    if (!(target in merged) || typeof value !== typeof merged[target]) continue;
+    const allowed = ENUM_VALUES[target];
+    if (allowed && !allowed.includes(value as string)) continue;
+    (merged[target] as unknown) = value;
   }
   return merged;
 }
